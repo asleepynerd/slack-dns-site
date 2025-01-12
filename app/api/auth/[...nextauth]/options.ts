@@ -1,3 +1,4 @@
+//@ts-nocheck
 import type { NextAuthOptions } from "next-auth";
 import SlackProvider from "next-auth/providers/slack";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";

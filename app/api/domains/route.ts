@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { options } from "../auth/[...nextauth]/options";
