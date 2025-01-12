@@ -1,5 +1,4 @@
 //@ts-nocheck
-
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { options } from "../auth/[...nextauth]/options";
@@ -11,6 +10,10 @@ import {
   deleteDNSRecord,
 } from "@/lib/cloudflare";
 
+import mongoose from "mongoose";
+
+mongoose.connect(process.env.MONGODB_URI!);
+
 export async function GET() {
   const session = await getServerSession(options);
 
@@ -18,9 +21,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  //console.log("session", session);
+  console.log("session", session);
 
-  const userDomains = await Domain.findOne({ userId: session.user.id });
+  const userDomains = await Domain.findOne({ userId: session.user.slackId });
   return NextResponse.json(userDomains?.domains || []);
 }
 
@@ -32,11 +35,10 @@ export async function POST(req: Request) {
   }
 
   const data = await req.json();
-  const { domain, recordType, content } = data;
+  const { domain, recordType, records } = data;
 
-  // Domain validation
   const domainPattern =
-    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw)$/i;
+    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw|wagging\.dev|furries\.pw|fluff\.pw|floofy\.pw|died\.pw|woah\.pw|trying\.cloud|loves-being-a\.dev|cant-be-asked\.dev|drinks-tea\.uk|doesnt-give-a-fuck\.org|boredom\.dev)$/i;
   if (!domainPattern.test(domain)) {
     return NextResponse.json(
       { error: "Invalid domain format" },
@@ -44,42 +46,42 @@ export async function POST(req: Request) {
     );
   }
 
-  // Check if domain is taken
-  const taken = await isDomainTaken(domain);
-  if (taken) {
-    return NextResponse.json(
-      { error: "Domain already taken" },
-      { status: 400 }
-    );
+  if (!["MX", "A", "AAAA", "NS"].includes(recordType)) {
+    const taken = await isDomainTaken(domain);
+    if (taken) {
+      return NextResponse.json(
+        { error: "Domain already taken" },
+        { status: 400 }
+      );
+    }
   }
 
-  // Create DNS record
   try {
-    await createDNSRecord(domain, recordType, content, session.user.id);
+    await createDNSRecord(domain, recordType, records, session.user.id);
 
-    // Save to MongoDB
-    const newDomain = {
+    const newRecords = records.map((record) => ({
       domain,
       recordType,
-      content,
+      ...record,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    }));
 
-    const userDomains = await Domain.findOne({ userId: session.user.id });
+    const userDomains = await Domain.findOne({ userId: session.user.slackId });
 
     if (userDomains) {
-      userDomains.domains.push(newDomain);
+      userDomains.domains.push(...newRecords);
       await userDomains.save();
     } else {
       await Domain.create({
-        userId: session.user.id,
-        domains: [newDomain],
+        userId: session.user.slackId,
+        domains: newRecords,
       });
     }
 
-    return NextResponse.json(newDomain);
+    return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Failed to create domain:", error);
     return NextResponse.json(
       { error: "Failed to create domain" },
       { status: 500 }
@@ -89,38 +91,35 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(options);
+  console.log("Delete - Session user:", session?.user);
 
-  if (!session?.user) {
+  if (!session?.user?.slackId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { domain } = await req.json();
-
-  // Verify user owns domain
-  const userDomain = await Domain.findOne({
-    userId: session.user.id,
-    "domains.domain": domain,
-  });
-
-  if (!userDomain) {
-    return NextResponse.json(
-      { error: "Domain not found or unauthorized" },
-      { status: 404 }
-    );
-  }
+  const { domain, recordType } = await req.json();
+  console.log("Deleting domain:", domain);
 
   try {
-    // Delete from Cloudflare
     await deleteDNSRecord(domain);
 
-    // Remove from MongoDB
-    await Domain.updateOne(
-      { userId: session.user.id },
-      { $pull: { domains: { domain: domain } } }
+    const result = await Domain.updateOne(
+      { userId: session.user.slackId },
+      {
+        $pull: {
+          domains: {
+            domain: domain,
+            recordType: recordType,
+          },
+        },
+      }
     );
+
+    console.log("Delete result:", result);
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Delete error:", error);
     return NextResponse.json(
       { error: "Failed to delete domain" },
       { status: 500 }
@@ -129,18 +128,16 @@ export async function DELETE(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const session = await getServerSession();
+  const session = await getServerSession(options);
 
-  if (!session?.user) {
+  if (!session?.user?.slackId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const data = await req.json();
-  const { domain, recordType, content } = data;
+  const { domain, recordType, content } = await req.json();
 
-  // Domain validation
   const domainPattern =
-    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw)$/i;
+    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw|wagging\.dev|furries\.pw|fluff\.pw|floofy\.pw|died\.pw|woah\.pw|trying\.cloud|loves-being-a\.dev|cant-be-asked\.dev|drinks-tea\.uk|doesnt-give-a-fuck\.org|boredom\.dev)$/i;
   if (!domainPattern.test(domain)) {
     return NextResponse.json(
       { error: "Invalid domain format" },
@@ -148,9 +145,8 @@ export async function PUT(req: Request) {
     );
   }
 
-  // Verify user owns domain
   const userDomain = await Domain.findOne({
-    userId: session.user.id,
+    userId: session.user.slackId,
     "domains.domain": domain,
   });
 
@@ -162,13 +158,9 @@ export async function PUT(req: Request) {
   }
 
   try {
-    // Update Cloudflare DNS record
-    await updateDNSRecord(domain, recordType, content, session.user.id);
-
-    // Update MongoDB record
-    await Domain.updateOne(
+    const updateResult = await Domain.updateOne(
       {
-        userId: session.user.id,
+        userId: session.user.slackId,
         "domains.domain": domain,
       },
       {
@@ -180,13 +172,30 @@ export async function PUT(req: Request) {
       }
     );
 
-    return NextResponse.json({
+    if (updateResult.modifiedCount === 0) {
+      return NextResponse.json(
+        { error: "Failed to update domain" },
+        { status: 500 }
+      );
+    }
+
+    const cloudflareResult = await updateDNSRecord(
       domain,
       recordType,
       content,
-      updatedAt: new Date(),
-    });
+      session.user.slackId
+    );
+
+    if (!cloudflareResult) {
+      return NextResponse.json(
+        { error: "Failed to update DNS record" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Update error:", error);
     return NextResponse.json(
       { error: "Failed to update domain" },
       { status: 500 }

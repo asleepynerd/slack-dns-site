@@ -4,7 +4,7 @@ export interface CloudflareConfig {
   };
 }
 
-const config: CloudflareConfig = {
+export const config: CloudflareConfig = {
   cloudflareZones: {
     "is-a-furry.dev": process.env.CLOUDFLARE_ZONE_ID_DEV!,
     "is-a-furry.net": process.env.CLOUDFLARE_ZONE_ID_NET!,
@@ -53,10 +53,9 @@ export async function isDomainTaken(domain: string): Promise<boolean> {
 export async function createDNSRecord(
   domain: string,
   recordType: string,
-  content: string,
+  records: Array<{ content: string; priority?: number }>,
   userId: string,
-  proxied = false,
-  priority?: number
+  proxied = false
 ) {
   const parts = domain.split(".");
   const baseDomain = parts.slice(-2).join(".");
@@ -66,9 +65,8 @@ export async function createDNSRecord(
     throw new Error(`No zone ID found for domain: ${baseDomain}`);
   }
 
-  const response = await fetch(
-    `${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records`,
-    {
+  const createPromises = records.map((record) =>
+    fetch(`${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
@@ -77,19 +75,22 @@ export async function createDNSRecord(
       body: JSON.stringify({
         type: recordType,
         name: domain,
-        content,
+        content: record.content,
         proxied,
-        priority,
+        priority: record.priority,
         comment: `Created by user: ${userId}`,
       }),
-    }
+    })
   );
 
-  if (!response.ok) {
-    throw new Error("Failed to create DNS record");
+  const results = await Promise.all(createPromises);
+
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    throw new Error("Failed to create some DNS records");
   }
 
-  return response.json();
+  return results.map((r) => r.json());
 }
 
 export async function updateDNSRecord(
@@ -106,7 +107,6 @@ export async function updateDNSRecord(
     throw new Error(`No zone ID found for domain: ${baseDomain}`);
   }
 
-  // Get existing record
   const records = await fetch(
     `${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records`,
     {
@@ -123,7 +123,6 @@ export async function updateDNSRecord(
     throw new Error(`No existing record found for ${domain}`);
   }
 
-  // Update record
   const response = await fetch(
     `${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records/${record.id}`,
     {
@@ -154,7 +153,6 @@ export async function deleteDNSRecord(domain: string): Promise<boolean> {
     throw new Error(`No zone ID found for domain: ${baseDomain}`);
   }
 
-  // Get existing record
   const records = await fetch(
     `${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records`,
     {
@@ -171,7 +169,6 @@ export async function deleteDNSRecord(domain: string): Promise<boolean> {
     throw new Error(`No DNS record found for ${domain}`);
   }
 
-  // Delete record
   const response = await fetch(
     `${CLOUDFLARE_API_URL}/zones/${zoneId}/dns_records/${record.id}`,
     {
