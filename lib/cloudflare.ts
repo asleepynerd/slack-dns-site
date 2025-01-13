@@ -1,3 +1,6 @@
+import { EmailDestination, EmailRoutingRule } from "./email-types";
+import fs from "fs";
+
 export interface CloudflareConfig {
   cloudflareZones: {
     [key: string]: string;
@@ -180,4 +183,95 @@ export async function deleteDNSRecord(domain: string): Promise<boolean> {
   );
 
   return response.ok;
+}
+
+export async function createEmailDestination(
+  email: string
+): Promise<EmailDestination> {
+  const response = await fetch(
+    `${CLOUDFLARE_API_URL}/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/email/routing/addresses`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_KEY!}`,
+        "X-Auth-Email": process.env.CLOUDFLARE_API_EMAIL!,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_KEY!,
+      },
+      body: JSON.stringify({ email }),
+    }
+  );
+
+  const data = await response.json();
+  console.log(data);
+  if (!data.success) throw new Error(data.errors[0].message);
+  return data.result;
+}
+
+export async function checkEmailVerification(
+  destinationId: string
+): Promise<boolean> {
+  const response = await fetch(
+    `${CLOUDFLARE_API_URL}/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/email/routing/addresses/${destinationId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_KEY!}`,
+        "X-Auth-Email": process.env.CLOUDFLARE_API_EMAIL!,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_KEY!,
+      },
+    }
+  );
+
+  const data = await response.json();
+  if (!data.success) throw new Error(data.errors[0].message);
+  return !!data.result.verified;
+}
+
+export async function createEmailRule(
+  zoneId: string,
+  fromEmail: string,
+  toEmail: string
+): Promise<EmailRoutingRule> {
+  const response = await fetch(
+    `${CLOUDFLARE_API_URL}/zones/${zoneId}/email/routing/rules`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_KEY!}`,
+        "X-Auth-Email": process.env.CLOUDFLARE_API_EMAIL!,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_KEY!,
+      },
+      body: JSON.stringify({
+        name: `Forward ${fromEmail} to ${toEmail}`,
+        enabled: true,
+        actions: [{ type: "forward", value: [toEmail] }],
+        matchers: [{ field: "to", type: "literal", value: fromEmail }],
+      }),
+    }
+  );
+
+  const data = await response.json();
+  if (!data.success) throw new Error(data.errors[0].message);
+  return data.result;
+}
+
+export async function deleteEmailRule(
+  zoneId: string,
+  ruleId: string
+): Promise<boolean> {
+  const response = await fetch(
+    `${CLOUDFLARE_API_URL}/zones/${zoneId}/email/routing/rules/${ruleId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_KEY!}`,
+        "X-Auth-Email": process.env.CLOUDFLARE_API_EMAIL!,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_KEY!,
+      },
+    }
+  );
+
+  const data = await response.json();
+  return data.success;
 }
