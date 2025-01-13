@@ -44,6 +44,8 @@ export function AddDomainDialog({
   const [aRecords, setARecords] = useState([{ content: "" }]);
   const [aaaaRecords, setAAAARecords] = useState([{ content: "" }]);
   const [nsRecords, setNSRecords] = useState([{ content: "" }]);
+  const [cnameRecords, setCnameRecords] = useState([{ content: "" }]);
+  const [txtRecords, setTxtRecords] = useState([{ content: "" }]);
 
   const addRecord = (type: DNSRecordType) => {
     switch (type) {
@@ -58,6 +60,12 @@ export function AddDomainDialog({
         break;
       case "NS":
         setNSRecords([...nsRecords, { content: "" }]);
+        break;
+      case "CNAME":
+        setCnameRecords([...cnameRecords, { content: "" }]);
+        break;
+      case "TXT":
+        setTxtRecords([...txtRecords, { content: "" }]);
         break;
     }
   };
@@ -75,6 +83,12 @@ export function AddDomainDialog({
         break;
       case "NS":
         setNSRecords(nsRecords.filter((_, i) => i !== index));
+        break;
+      case "CNAME":
+        setCnameRecords(cnameRecords.filter((_, i) => i !== index));
+        break;
+      case "TXT":
+        setTxtRecords(txtRecords.filter((_, i) => i !== index));
         break;
     }
   };
@@ -105,6 +119,10 @@ export function AddDomainDialog({
           ? aaaaRecords
           : recordType === "NS"
           ? nsRecords
+          : recordType === "CNAME"
+          ? cnameRecords
+          : recordType === "TXT"
+          ? txtRecords
           : [{ content: "" }],
     };
 
@@ -304,6 +322,60 @@ export function AddDomainDialog({
             </div>
           )}
 
+          {recordType === "CNAME" && (
+            <div className="space-y-4">
+              {cnameRecords.map((record, index) => (
+                <RecordInput
+                  key={index}
+                  type="CNAME"
+                  record={record}
+                  index={index}
+                  onRemove={() => removeRecord("CNAME", index)}
+                  onChange={(value) => {
+                    const newRecords = [...cnameRecords];
+                    newRecords[index] = value;
+                    setCnameRecords(newRecords);
+                  }}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addRecord("CNAME")}
+                className="w-full"
+              >
+                Add CNAME Record
+              </Button>
+            </div>
+          )}
+
+          {recordType === "TXT" && (
+            <div className="space-y-4">
+              {txtRecords.map((record, index) => (
+                <RecordInput
+                  key={index}
+                  type="TXT"
+                  record={record}
+                  index={index}
+                  onRemove={() => removeRecord("TXT", index)}
+                  onChange={(value) => {
+                    const newRecords = [...txtRecords];
+                    newRecords[index] = value;
+                    setTxtRecords(newRecords);
+                  }}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addRecord("TXT")}
+                className="w-full"
+              >
+                Add TXT Record
+              </Button>
+            </div>
+          )}
+
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Adding..." : "Add Domain"}
           </Button>
@@ -340,7 +412,13 @@ function RecordInput({ type, record, index, onRemove, onChange }) {
               ? "2001:db8::1"
               : type === "NS"
               ? "ns1.example.com"
-              : "mail.example.com"
+              : type === "MX"
+              ? "mail.example.com"
+              : type === "CNAME"
+              ? "target.example.com"
+              : type === "TXT"
+              ? "v=spf1 include:_spf.example.com ~all"
+              : "Record content"
           }
         />
       </div>
