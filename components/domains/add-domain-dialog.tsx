@@ -22,6 +22,7 @@ import { DNSRecordType, DNS_RECORD_TYPES } from "@/lib/dns-types";
 import { X } from "lucide-react";
 import { config as CfCfg } from "@/lib/cloudflare";
 import { toast } from "@/hooks/use-toast";
+import { DNS_TEMPLATES } from "@/lib/dns-templates";
 
 interface AddDomainDialogProps {
   open: boolean;
@@ -47,6 +48,7 @@ export function AddDomainDialog({
   const [nsRecords, setNSRecords] = useState([{ content: "" }]);
   const [cnameRecords, setCnameRecords] = useState([{ content: "" }]);
   const [txtRecords, setTxtRecords] = useState([{ content: "" }]);
+  const [selectedTemplate, setSelectedTemplate] = useState("custom");
 
   const resetForm = () => {
     setSubdomain("");
@@ -230,23 +232,66 @@ export function AddDomainDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Record Type</Label>
+            <Label>Template</Label>
             <Select
-              value={recordType}
-              onValueChange={(value) => setRecordType(value as DNSRecordType)}
+              value={selectedTemplate}
+              onValueChange={(value) => {
+                setSelectedTemplate(value);
+                if (value !== "custom") {
+                  const template = DNS_TEMPLATES[value];
+                  const firstRecord = template.records[0];
+                  setRecordType(firstRecord.type as DNSRecordType);
+
+                  switch (firstRecord.type) {
+                    case "MX":
+                      setMxRecords(firstRecord.data);
+                      break;
+                    case "A":
+                      setARecords(firstRecord.data);
+                      break;
+                    // ... handle other record types
+                  }
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {DNS_RECORD_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
+                {Object.entries(DNS_TEMPLATES).map(([key, template]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex flex-col">
+                      <span>{template.name}</span>
+                      <span className="text-xs text-zinc-400">
+                        {template.description}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {selectedTemplate === "custom" && (
+            <div className="space-y-2">
+              <Label>Record Type</Label>
+              <Select
+                value={recordType}
+                onValueChange={(value) => setRecordType(value as DNSRecordType)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DNS_RECORD_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {recordType === "MX" && (
             <div className="space-y-4">

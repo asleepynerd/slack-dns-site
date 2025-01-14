@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const { domain, recordType, records } = data;
 
   const domainPattern =
-    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw|wagging\.dev|furries\.pw|fluff\.pw|floofy\.pw|died\.pw|woah\.pw|trying\.cloud|loves-being-a\.dev|cant-be-asked\.dev|drinks-tea\.uk|doesnt-give-a-fuck\.org|boredom\.dev)$/i;
+    /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*\.(is-a-furry\.(dev|net)|sleeping\.wtf|asleep\.pw|wagging\.dev|furries\.pw|fluff\.pw|floofy\.pw|died\.pw|woah\.pw|trying\.cloud|loves-being-a\.dev|cant-be-asked\.dev|drinks-tea\.uk|doesnt-give-a-fuck\.org|boredom\.dev|verygay\.xyz)$/i;
   if (!domainPattern.test(domain)) {
     return NextResponse.json(
       { error: "Invalid domain format" },
