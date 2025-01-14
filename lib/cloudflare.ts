@@ -26,6 +26,7 @@ export const config: CloudflareConfig = {
     "doesnt-give-a-fuck.org":
       process.env.CLOUDFLARE_ZONE_ID_DOESNT_GIVE_A_FUCK_ORG!,
     "boredom.dev": process.env.CLOUDFLARE_ZONE_ID_BOREDOM_DEV!,
+    "verygay.xyz": process.env.CLOUDFLARE_ZONE_ID_VERYGAY_XYZ!,
   },
 };
 

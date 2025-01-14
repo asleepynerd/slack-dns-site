@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { DNSRecordType, DNS_RECORD_TYPES } from "@/lib/dns-types";
 import { X } from "lucide-react";
 import { config as CfCfg } from "@/lib/cloudflare";
+import { toast } from "@/hooks/use-toast";
 
 interface AddDomainDialogProps {
   open: boolean;
@@ -46,6 +47,18 @@ export function AddDomainDialog({
   const [nsRecords, setNSRecords] = useState([{ content: "" }]);
   const [cnameRecords, setCnameRecords] = useState([{ content: "" }]);
   const [txtRecords, setTxtRecords] = useState([{ content: "" }]);
+
+  const resetForm = () => {
+    setSubdomain("");
+    setSubdomainError("");
+    setRecordType("A");
+    setMxRecords([{ priority: 0, content: "" }]);
+    setARecords([{ content: "" }]);
+    setAAAARecords([{ content: "" }]);
+    setNSRecords([{ content: "" }]);
+    setCnameRecords([{ content: "" }]);
+    setTxtRecords([{ content: "" }]);
+  };
 
   const addRecord = (type: DNSRecordType) => {
     switch (type) {
@@ -134,11 +147,24 @@ export function AddDomainDialog({
       });
 
       if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Domain ${fullDomain} added successfully`,
+        });
+        resetForm();
         onDomainAdded();
         onOpenChange(false);
+      } else {
+        const error = await response.json();
+        throw new Error(error.message);
       }
     } catch (error) {
       console.error("Failed to add domain:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add domain. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +176,13 @@ export function AddDomainDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) resetForm();
+        onOpenChange(open);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Domain</DialogTitle>
@@ -377,7 +409,14 @@ export function AddDomainDialog({
           )}
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Adding..." : "Add Domain"}
+            {isSubmitting ? (
+              <div className="flex items-center space-x-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-800 border-t-white" />
+                <span>Adding Domain...</span>
+              </div>
+            ) : (
+              "Add Domain"
+            )}
           </Button>
         </form>
       </DialogContent>
