@@ -8,6 +8,9 @@
     },
     "app/api/whitelist/**/*": {
       "maxDuration": 15
+    },
+    "app/api/slack/**/*": {
+      "maxDuration": 15
     }
   }
 }

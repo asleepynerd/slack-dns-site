@@ -2,101 +2,108 @@
 import { NextResponse } from "next/server";
 import { slackApp } from "@/lib/slack";
 import { Whitelist } from "@/lib/models/whitelist";
+import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 15;
+export const preferredRegion = "iad1"; // US East (N. Virginia)
+
+function verifySlackRequest(req: Request, body: string) {
+  const timestamp = req.headers.get("x-slack-request-timestamp");
+  const signature = req.headers.get("x-slack-signature");
+
+  if (!timestamp || !signature) return false;
+
+  // Verify request is not older than 5 minutes
+  const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
+  if (parseInt(timestamp) < fiveMinutesAgo) return false;
+
+  const sigBasestring = `v0:${timestamp}:${body}`;
+  const mySignature =
+    "v0=" +
+    crypto
+      .createHmac("sha256", process.env.SLACK_SIGNING_SECRET!)
+      .update(sigBasestring)
+      .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(mySignature),
+    Buffer.from(signature)
+  );
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.text();
-    const headers = Object.fromEntries(req.headers.entries());
+
+    // Quick verification before processing
+    if (!verifySlackRequest(req, body)) {
+      console.error("Invalid Slack signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const payload = JSON.parse(body);
     console.log("Received Slack event:", {
-      contentType: headers["content-type"],
-      body: body.slice(0, 500),
+      type: payload.type,
+      event: payload.event?.type,
     });
 
-    if (
-      headers["content-type"]?.includes("application/x-www-form-urlencoded")
-    ) {
-      const params = new URLSearchParams(body);
-      const payload = JSON.parse(params.get("payload") || "{}");
-      console.log("Parsed payload:", payload);
-
-      if (payload.type === "block_actions") {
-        const action = payload.actions[0];
-        console.log("Processing block action:", action);
-
-        if (
-          action.action_id === "approve_request" ||
-          action.action_id === "deny_request"
-        ) {
-          const { requestId, userId, slackUserId } = JSON.parse(action.value);
-          console.log("Action values:", { requestId, userId, slackUserId });
-          const request = await Whitelist.findById(requestId);
-
-          if (!request) {
-            console.error("Request not found:", requestId);
-            return NextResponse.json(
-              { error: "Request not found" },
-              { status: 404 }
-            );
-          }
-
-          request.status =
-            action.action_id === "approve_request" ? "approved" : "denied";
-          request.decidedAt = new Date();
-          request.decidedBy = payload.user.id;
-          await request.save();
-
-          console.log("Updated request:", request);
-
-          console.log("Sending DM to:", slackUserId);
-          await slackApp.client.chat.postMessage({
-            channel: slackUserId,
-            text:
-              request.status === "approved"
-                ? "Your inbox access request has been approved! You can now access the inbox feature!"
-                : "Your inbox access request has been denied. You can try again after 24 hours.",
-          });
-
-          await slackApp.client.chat.update({
-            channel: payload.channel.id,
-            ts: payload.message.ts,
-            blocks: [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `Request from *${
-                    payload.message.text.split("*")[1]
-                  }* was ${request.status}`,
-                },
-              },
-            ],
-          });
-
-          return NextResponse.json({ ok: true });
-        }
-      }
+    // Handle URL verification
+    if (payload.type === "url_verification") {
+      return NextResponse.json({ challenge: payload.challenge });
     }
 
-    if (headers["content-type"] === "application/json") {
-      const jsonBody = JSON.parse(body);
-      if (jsonBody.type === "url_verification") {
-        return NextResponse.json({ challenge: jsonBody.challenge });
+    // Handle events
+    if (payload.type === "event_callback") {
+      const { event } = payload;
+
+      switch (event.type) {
+        case "app_home_opened":
+          // Handle app home opened event
+          await handleAppHomeOpened(event);
+          break;
+        // Add other event handlers as needed
       }
     }
-
-    await slackApp.processEvent({
-      body,
-      headers,
-    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Slack event error:", error);
+    console.error("Slack events error:", error);
     return NextResponse.json(
-      { error: "Failed to process event" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-export const dynamic = "force-dynamic";
+async function handleAppHomeOpened(event: any) {
+  try {
+    // Implement minimal app home view
+    await slackApp.client.views.publish({
+      user_id: event.user,
+      view: {
+        type: "home",
+        blocks: [
+          {
+            type: "header",
+            block_id: "header",
+            text: {
+              type: "plain_text",
+              text: "🌐 Your Registered Domains",
+              emoji: true,
+            },
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "Manage your domains and email inboxes here.",
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("Error updating app home:", error);
+  }
+}
