@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Message, Inbox } from "@/lib/models/inbox";
 import crypto from "crypto";
+import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 export const preferredRegion = "iad1"; // US East (N. Virginia)
+
+interface LeanInbox {
+  _id: mongoose.Types.ObjectId;
+}
 
 function verifyWebhookSignature(
   timestamp: string,
@@ -55,13 +60,12 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Find inbox in a single query
     const inbox = await Inbox.findOne({
       $or: [{ email: recipient }, { address: recipient }],
       active: true,
     })
       .select("_id")
-      .lean();
+      .lean<LeanInbox>();
 
     if (!inbox) {
       console.error("No active inbox found for recipient:", recipient);
@@ -70,7 +74,7 @@ export async function POST(req: Request) {
 
     // Create message document
     const message = new Message({
-      inboxId: inbox._id,
+      inboxId: inbox._id.toString(),
       from: sender,
       to: recipient,
       subject,
