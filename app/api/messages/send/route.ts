@@ -3,9 +3,18 @@ import { getServerSession } from "next-auth";
 import { options } from "../../auth/[...nextauth]/options";
 import { Message, Inbox } from "@/lib/models/inbox";
 import { connectDB } from "@/lib/db";
+import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
+
+interface LeanInbox {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  userId: string;
+  address: string;
+  active: boolean;
+}
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +31,9 @@ export async function POST(req: Request) {
     const inbox = await Inbox.findOne({
       _id: inboxId,
       userId: session.user.id,
-    }).lean();
+    })
+      .select("_id email userId address active")
+      .lean<LeanInbox>();
 
     if (!inbox) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });

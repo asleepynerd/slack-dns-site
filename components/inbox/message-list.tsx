@@ -9,28 +9,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Trash2 } from "lucide-react";
-
-interface Message {
-  _id: string;
-  subject: string;
-  from: string;
-  to: string;
-  body: string;
-  html?: string;
-  createdAt: string | Date;
-  receivedAt: string | Date;
-  inboxId: string;
-  read: boolean;
-  sent: boolean;
-  junk: boolean;
-  deleted: boolean;
-  deletedAt?: string | Date;
-  attachments?: Array<{
-    filename: string;
-    url: string;
-    contentType: string;
-  }>;
-}
+import { Message, FolderType } from "@/lib/types";
 
 function truncateText(text: string | undefined | null, maxLength: number) {
   if (!text) return "";
@@ -68,9 +47,7 @@ export function MessageList({ inboxId }: { inboxId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentFolder, setCurrentFolder] = useState<
-    "inbox" | "sent" | "junk" | "deleted" | "drafts"
-  >("inbox");
+  const [currentFolder, setCurrentFolder] = useState<FolderType>("inbox");
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);

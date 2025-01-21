@@ -13,24 +13,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { format } from "date-fns";
 import { Reply, Forward } from "lucide-react";
 import { ComposeMessage } from "./compose-message";
+import { Message, FolderType } from "@/lib/types";
 
 interface MessageViewDialogProps {
-  message: {
-    _id: string;
-    subject: string;
-    from: string;
-    to: string;
-    body: string;
-    html?: string;
-    createdAt: string;
-    inboxId: string;
-    attachments?: Array<{
-      filename: string;
-      url: string;
-      contentType: string;
-    }>;
-  } | null;
-  inFolder: "inbox" | "sent" | "junk" | "deleted" | "drafts";
+  message: Message | null;
+  inFolder: FolderType;
   onClose: () => void;
   onAction: () => void;
 }

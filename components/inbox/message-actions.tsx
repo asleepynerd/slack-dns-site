@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Trash2, Archive, MailX } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { FolderType } from "@/lib/types";
 
 interface MessageActionsProps {
   messageId: string;
-  inFolder: "inbox" | "sent" | "junk" | "deleted" | "drafts";
+  inFolder: FolderType;
   onAction: () => void;
 }
 
