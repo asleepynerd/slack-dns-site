@@ -4,7 +4,7 @@ import { options } from "../../auth/[...nextauth]/options";
 import { Whitelist } from "@/lib/models/whitelist";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function GET(req: Request) {
   try {

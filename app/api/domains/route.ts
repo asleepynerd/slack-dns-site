@@ -1,6 +1,8 @@
 //@ts-nocheck
 
 import { NextResponse } from "next/server";
+
+export const runtime = "edge";
 import { getServerSession } from "next-auth";
 import { options } from "../auth/[...nextauth]/options";
 import { Domain } from "@/lib/models/domain";

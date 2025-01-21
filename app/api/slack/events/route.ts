@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { NextResponse } from "next/server";
+
+export const runtime = "edge";
 import { slackApp } from "@/lib/slack";
 import { Whitelist } from "@/lib/models/whitelist";
 

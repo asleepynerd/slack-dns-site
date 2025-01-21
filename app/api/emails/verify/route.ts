@@ -1,4 +1,6 @@
 import { getServerSession } from "next-auth/next";
+
+export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { options } from "../../auth/[...nextauth]/options";
 import {

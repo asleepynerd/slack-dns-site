@@ -5,7 +5,7 @@ import { Message, Inbox } from "@/lib/models/inbox";
 import { options } from "../../auth/[...nextauth]/options";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const preferredRegion = "auto";
 
 export async function POST(req: Request) {

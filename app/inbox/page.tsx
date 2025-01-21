@@ -1,4 +1,6 @@
 import { getServerSession } from "next-auth/next";
+
+export const runtime = "edge";
 import { redirect } from "next/navigation";
 import { options } from "../api/auth/[...nextauth]/options";
 import { Navbar } from "@/components/layout/navbar";
