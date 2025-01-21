@@ -11,6 +11,9 @@
     },
     "app/api/slack/**/*": {
       "maxDuration": 15
+    },
+    "app/api/inboxes/**/*": {
+      "maxDuration": 15
     }
   }
 }
