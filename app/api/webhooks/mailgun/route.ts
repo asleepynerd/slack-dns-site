@@ -1,73 +1,92 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
 import { Message, Inbox } from "@/lib/models/inbox";
-import mongoose from "mongoose";
-import { verifyMailgunWebhook } from "@/lib/verify-mailgun-webhook";
+import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+export const preferredRegion = "iad1"; // US East (N. Virginia)
+
+function verifyWebhookSignature(
+  timestamp: string,
+  token: string,
+  signature: string,
+  signingKey: string
+): boolean {
+  const encodedToken = crypto
+    .createHmac("sha256", signingKey)
+    .update(timestamp.concat(token))
+    .digest("hex");
+  return encodedToken === signature;
+}
 
 export async function POST(req: Request) {
+  console.log("Mailgun webhook received");
+  const startTime = Date.now();
+
   try {
-    const data = await req.formData();
+    const formData = await req.formData();
 
-    console.log("Received Mailgun webhook:", {
-      sender: data.get("sender"),
-      recipient: data.get("recipient"),
-      subject: data.get("subject"),
-      timestamp: data.get("timestamp"),
-    });
+    // Quick signature verification before any DB operations
+    const timestamp = formData.get("timestamp") as string;
+    const token = formData.get("token") as string;
+    const signature = formData.get("signature") as string;
 
-    const timestamp = data.get("timestamp") as string;
-    const token = data.get("token") as string;
-    const signature = data.get("signature") as string;
-
-    if (!verifyMailgunWebhook(timestamp, token, signature)) {
+    if (
+      !verifyWebhookSignature(
+        timestamp,
+        token,
+        signature,
+        process.env.MAILGUN_WEBHOOK_SIGNING_KEY!
+      )
+    ) {
       console.error("Invalid webhook signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const incomingEmail = {
-      from: data.get("sender") as string,
-      to: data.get("recipient") as string,
-      subject: data.get("subject") as string,
-      body: data.get("body-plain") as string,
-      html: data.get("body-html") as string,
-      messageId: data.get("Message-Id") as string,
-    };
+    // Extract essential data first
+    const recipient = formData.get("recipient") as string;
+    const sender = formData.get("sender") as string;
+    const subject = formData.get("subject") as string;
+    const body = formData.get("body-plain") as string;
+    const html = formData.get("body-html") as string;
 
-    console.log("Looking for inbox:", incomingEmail.to);
+    console.log("Processing email for recipient:", recipient);
 
+    await connectDB();
+
+    // Find inbox in a single query
     const inbox = await Inbox.findOne({
-      email: incomingEmail.to,
+      $or: [{ email: recipient }, { address: recipient }],
       active: true,
-    });
+    })
+      .select("_id")
+      .lean();
 
     if (!inbox) {
-      console.error("Inbox not found for:", incomingEmail.to);
+      console.error("No active inbox found for recipient:", recipient);
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    console.log("Found inbox:", {
-      _id: inbox._id,
-      email: inbox.email,
-      userId: inbox.userId,
-    });
-
+    // Create message document
     const message = new Message({
-      ...incomingEmail,
-      inboxId: inbox._id.toString(),
-      sent: false,
-      junk: false,
-      deleted: false,
+      inboxId: inbox._id,
+      from: sender,
+      to: recipient,
+      subject,
+      body,
+      html,
+      receivedAt: new Date(),
     });
 
     await message.save();
-    console.log("Message saved:", {
-      _id: message._id,
-      inboxId: message.inboxId,
-      subject: message.subject,
-    });
+
+    const processingTime = Date.now() - startTime;
+    console.log(`Webhook processed in ${processingTime}ms`);
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("Mailgun webhook error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

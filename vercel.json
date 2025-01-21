@@ -2,6 +2,9 @@
   "functions": {
     "app/api/**/*": {
       "maxDuration": 10
+    },
+    "app/api/webhooks/mailgun": {
+      "maxDuration": 30
     }
   }
 }
