@@ -53,13 +53,20 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
-    const { email } = data;
+    console.log("Received request data:", data);
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    const { subdomain } = data;
+    if (!subdomain) {
+      return NextResponse.json(
+        { error: "Subdomain is required" },
+        { status: 400 }
+      );
     }
 
-    // Validate email format
+    const email = `${subdomain}@hackclubber.dev`;
+    console.log("Constructed email:", email);
+
+    // Validate email format (keep this as a safety check)
     if (!email.endsWith("@hackclubber.dev")) {
       return NextResponse.json(
         { error: "Invalid email domain" },
