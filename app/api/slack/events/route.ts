@@ -35,6 +35,7 @@ function verifySlackRequest(req: Request, body: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.text();
+    const contentType = req.headers.get("content-type") || "";
 
     // Quick verification before processing
     if (!verifySlackRequest(req, body)) {
@@ -42,7 +43,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const payload = JSON.parse(body);
+    let payload;
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const params = new URLSearchParams(body);
+      const payloadStr = params.get("payload");
+      if (payloadStr) {
+        payload = JSON.parse(payloadStr);
+      } else {
+        // Handle non-interactive messages
+        const bodyParams = Object.fromEntries(params.entries());
+        payload = bodyParams;
+      }
+    } else {
+      payload = JSON.parse(body);
+    }
+
     console.log("Received Slack event:", {
       type: payload.type,
       event: payload.event?.type,
@@ -51,6 +66,53 @@ export async function POST(req: Request) {
     // Handle URL verification
     if (payload.type === "url_verification") {
       return NextResponse.json({ challenge: payload.challenge });
+    }
+
+    // Handle interactive components (buttons, etc.)
+    if (payload.type === "block_actions") {
+      const action = payload.actions[0];
+
+      if (
+        action.action_id === "approve_request" ||
+        action.action_id === "deny_request"
+      ) {
+        const { requestId, userId, slackUserId } = JSON.parse(action.value);
+        const request = await Whitelist.findByIdAndUpdate(
+          requestId,
+          {
+            $set: {
+              status:
+                action.action_id === "approve_request" ? "approved" : "denied",
+              decidedAt: new Date(),
+              decidedBy: payload.user.id,
+            },
+          },
+          { new: true }
+        ).lean();
+
+        // Notify the user
+        await slackApp.client.chat.postMessage({
+          channel: slackUserId,
+          text: `Your inbox access request has been ${request!.status}`,
+        });
+
+        // Update the original message
+        await slackApp.client.chat.update({
+          channel: payload.channel.id,
+          ts: payload.message.ts,
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Request was ${request!.status}`,
+              },
+            },
+          ],
+        });
+
+        return NextResponse.json({ ok: true });
+      }
     }
 
     // Handle events
