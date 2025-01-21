@@ -4,8 +4,7 @@ import { options } from "../api/auth/[...nextauth]/options";
 import { Navbar } from "@/components/layout/navbar";
 import { InboxList } from "@/components/inbox/inbox-list";
 import { Whitelist } from "@/lib/models/whitelist";
-import mongoose from "mongoose";
-import clientPromise from "@/lib/mongodb";
+import { connectDB } from "@/lib/db";
 
 export default async function InboxPage() {
   const session = await getServerSession(options);
@@ -15,13 +14,7 @@ export default async function InboxPage() {
   }
 
   try {
-    // Ensure connection is established with timeout
-    await Promise.race([
-      clientPromise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("DB Connection timeout")), 5000)
-      ),
-    ]);
+    await connectDB();
 
     const whitelist = await Whitelist.findOne({
       userId: session.user.id,
@@ -54,7 +47,7 @@ export default async function InboxPage() {
     );
   } catch (error) {
     console.error("Inbox page error:", error);
-    // You might want to handle this more gracefully
-    redirect("/error?message=Failed+to+load+inbox");
+    // Instead of redirecting to error page, redirect to request page
+    redirect("/inbox/request");
   }
 }
