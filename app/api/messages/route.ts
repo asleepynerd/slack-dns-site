@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { Message, Inbox } from "@/lib/models/inbox";
 import { getServerSession } from "next-auth";
 import { options } from "../auth/[...nextauth]/options";
-import { Message, Inbox } from "@/lib/models/inbox";
+import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 5;
 
 export async function GET(req: Request) {
   try {
@@ -11,28 +15,30 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const inboxId = searchParams.get("inboxId");
-    const folder = searchParams.get("folder") || "inbox";
+    const url = new URL(req.url);
+    const inboxId = url.searchParams.get("inboxId");
+    const folder = url.searchParams.get("folder") || "inbox";
+
+    console.log("Debug - Request params:", { inboxId, folder });
 
     if (!inboxId) {
-      return NextResponse.json({ error: "Inbox ID required" }, { status: 400 });
+      return NextResponse.json({ error: "Missing inboxId" }, { status: 400 });
     }
 
+    await connectDB();
+
+    // First verify the inbox belongs to the user
     const inbox = await Inbox.findOne({
       _id: new mongoose.Types.ObjectId(inboxId),
       userId: session.user.id,
     });
 
     if (!inbox) {
-      console.error("Inbox not found:", inboxId);
+      console.error("Inbox not found or unauthorized:", inboxId);
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    const allInboxMessages = await Message.find({
-      inboxId: inbox._id.toString(),
-    }).lean();
-
+    // Build query based on folder
     let query: any = { inboxId: inbox._id.toString() };
 
     switch (folder) {
@@ -40,27 +46,31 @@ export async function GET(req: Request) {
         query.sent = true;
         query.deleted = { $ne: true };
         break;
-      case "junk":
-        query.junk = true;
-        query.deleted = { $ne: true };
-        break;
       case "deleted":
         query.deleted = true;
         break;
+      case "inbox":
       default:
-        query = {
-          inboxId: inbox._id.toString(),
-          sent: false,
-          junk: { $ne: true },
-          deleted: { $ne: true },
-        };
+        query.sent = false;
+        query.deleted = { $ne: true };
+        break;
     }
 
-    const messages = await Message.find(query).sort({ createdAt: -1 }).lean();
+    console.log("Debug - MongoDB query:", JSON.stringify(query, null, 2));
+
+    const messages = await Message.find(query)
+      .select(
+        "subject from to sent deleted createdAt body html read attachments"
+      )
+      .lean()
+      .limit(100)
+      .sort({ createdAt: -1 });
+
+    console.log("Debug - Found messages count:", messages.length);
 
     return NextResponse.json(messages);
   } catch (error) {
-    console.error("Messages error:", error);
+    console.error("Messages API error:", error);
     return NextResponse.json(
       { error: "Failed to fetch messages" },
       { status: 500 }
@@ -68,5 +78,4 @@ export async function GET(req: Request) {
   }
 }
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

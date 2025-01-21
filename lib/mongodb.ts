@@ -7,47 +7,28 @@ if (!process.env.MONGODB_URI) {
 const uri = process.env.MONGODB_URI;
 
 const options: mongoose.ConnectOptions = {
-  serverSelectionTimeoutMS: 20000,
-  maxPoolSize: 10,
-  minPoolSize: 2,
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 5,
+  minPoolSize: 1,
+  connectTimeoutMS: 5000,
+  socketTimeoutMS: 5000,
   retryWrites: true,
   retryReads: true,
 };
 
-let clientPromise: mongoose.Connection;
+let clientPromise: Promise<typeof mongoose>;
 
 if (process.env.NODE_ENV === "development") {
-
   let globalWithMongoose = global as typeof globalThis & {
-    mongoose: mongoose.Connection;
+    mongoose: Promise<typeof mongoose>;
   };
 
   if (!globalWithMongoose.mongoose) {
-    mongoose.connect(uri, options).catch((error) => {
-      console.error("MongoDB connection error:", error);
-    });
-
-    globalWithMongoose.mongoose = mongoose.connection;
-
-    mongoose.connection.on("error", (error) => {
-      console.error("MongoDB connection error:", error);
-    });
-
-    mongoose.connection.on("disconnected", () => {
-      console.log("MongoDB disconnected, attempting to reconnect...");
-    });
-
-    mongoose.connection.on("reconnected", () => {
-      console.log("MongoDB reconnected");
-    });
+    globalWithMongoose.mongoose = mongoose.connect(uri, options);
   }
   clientPromise = globalWithMongoose.mongoose;
 } else {
-
-  mongoose.connect(uri, options).catch((error) => {
-    console.error("MongoDB connection error:", error);
-  });
-  clientPromise = mongoose.connection;
+  clientPromise = mongoose.connect(uri, options);
 }
 
 export default clientPromise;

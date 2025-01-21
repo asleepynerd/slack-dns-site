@@ -27,7 +27,6 @@ export async function POST(req: Request) {
 
     const existingInbox = await Inbox.findOne({ email });
     if (existingInbox) {
-
       return NextResponse.json(
         { error: "Email address already taken" },
         { status: 400 }

@@ -31,7 +31,8 @@ interface Message {
   }>;
 }
 
-function truncateText(text: string, maxLength: number) {
+function truncateText(text: string | undefined | null, maxLength: number) {
+  if (!text) return "";
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + "...";
 }

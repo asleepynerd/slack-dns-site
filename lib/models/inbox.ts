@@ -16,6 +16,9 @@ const messageSchema = new mongoose.Schema({
   subject: { type: String },
   body: { type: String },
   html: { type: String },
+  folder: { type: String, default: "inbox" },
+  sent: { type: Boolean, default: false },
+  deleted: { type: Boolean, default: false },
   attachments: [
     {
       filename: String,
@@ -38,6 +41,9 @@ inboxSchema.pre("save", function (next) {
   }
   next();
 });
+
+messageSchema.index({ inboxId: 1, folder: 1, createdAt: -1 });
+messageSchema.index({ inboxId: 1, createdAt: -1 });
 
 // Remove the Draft model and only export Inbox and Message
 export const Inbox =
