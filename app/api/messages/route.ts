@@ -60,11 +60,11 @@ export async function GET(req: Request) {
 
     const messages = await Message.find(query)
       .select(
-        "subject from to sent deleted createdAt body html read attachments"
+        "subject from to sent deleted createdAt receivedAt body html read attachments"
       )
       .lean()
       .limit(100)
-      .sort({ createdAt: -1 });
+      .sort({ receivedAt: -1 });
 
     console.log("Debug - Found messages count:", messages.length);
 

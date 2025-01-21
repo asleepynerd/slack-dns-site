@@ -18,6 +18,7 @@ interface Message {
   body: string;
   html?: string;
   createdAt: string;
+  receivedAt: string;
   inboxId: string;
   read: boolean;
   sent: boolean;
@@ -155,7 +156,9 @@ export function MessageList({ inboxId }: { inboxId: string }) {
                           : `From: ${message.from}`}
                       </div>
                       <div className="text-sm text-zinc-500">
-                        {new Date(message.createdAt).toLocaleString()}
+                        {new Date(
+                          message.receivedAt || message.createdAt
+                        ).toLocaleString()}
                       </div>
                     </div>
                   </div>
