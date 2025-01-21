@@ -1,6 +1,4 @@
 import { getServerSession } from "next-auth/next";
-
-export const runtime = "edge";
 import { redirect } from "next/navigation";
 import { options } from "../api/auth/[...nextauth]/options";
 import { EmailForwardingList } from "@/components/email/email-forwarding-list";

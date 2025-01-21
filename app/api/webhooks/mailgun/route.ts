@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-
-export const runtime = "edge";
 import { Message, Inbox } from "@/lib/models/inbox";
 import mongoose from "mongoose";
 import { verifyMailgunWebhook } from "@/lib/verify-mailgun-webhook";
