@@ -8,6 +8,7 @@ interface IWhitelist {
   decidedAt?: Date;
   decidedBy?: string;
   lastRequestAt: Date;
+  quizCompletedAt?: Date;
 }
 
 interface WhitelistModel extends mongoose.Model<IWhitelist> {
@@ -27,6 +28,7 @@ const WhitelistSchema = new mongoose.Schema<IWhitelist>({
   decidedAt: Date,
   decidedBy: String,
   lastRequestAt: { type: Date, default: Date.now },
+  quizCompletedAt: Date,
 });
 
 WhitelistSchema.index({ userId: 1, status: 1 });
