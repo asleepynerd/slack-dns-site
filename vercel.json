@@ -5,6 +5,9 @@
     },
     "app/api/webhooks/mailgun": {
       "maxDuration": 30
+    },
+    "app/api/whitelist/**/*": {
+      "maxDuration": 15
     }
   }
 }

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { options } from "../../auth/[...nextauth]/options";
 import { Whitelist } from "@/lib/models/whitelist";
-import { slackApp } from "@/lib/slack";
+import { connectDB } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 15;
 
 export async function POST(req: Request) {
   try {
@@ -11,103 +14,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("Session user:", {
-      id: session.user.id,
-      slackId: session.user.slackId,
-      name: session.user.name,
-      email: session.user.email,
-    });
+    await connectDB();
 
-    await Whitelist.cleanupOldRequests();
+    // Check for existing request
+    const existingRequest = await Whitelist.findOne({
+      userId: session.user.id,
+    })
+      .select("status lastRequestAt")
+      .lean();
 
-    const canRequest = await Whitelist.canMakeNewRequest(session.user.id);
-    if (!canRequest) {
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    if (existingRequest?.lastRequestAt > twentyFourHoursAgo) {
       return NextResponse.json(
-        { error: "Please wait 24 hours before requesting again" },
+        { error: "Please wait 24 hours between requests" },
         { status: 429 }
       );
     }
 
-    const existingRequest = await Whitelist.findOne({
-      userId: session.user.id,
-    });
-
-    let newRequest;
-    if (existingRequest) {
-      if (existingRequest.status === "approved") {
-        return NextResponse.json(
-          { error: "You already have access" },
-          { status: 400 }
-        );
-      }
-
-      if (existingRequest.status === "pending") {
-        return NextResponse.json(
-          { error: "Your request is still pending" },
-          { status: 400 }
-        );
-      }
-
-      existingRequest.status = "pending";
-      existingRequest.lastRequestAt = new Date();
-      existingRequest.decidedAt = undefined;
-      existingRequest.decidedBy = undefined;
-      existingRequest.slackUserId = session.user.slackId;
-      newRequest = await existingRequest.save();
-    } else {
-      newRequest = await new Whitelist({
-        userId: session.user.id,
-        slackUserId: session.user.slackId,
-        status: "pending",
-        lastRequestAt: new Date(),
-      }).save();
-    }
-
-    await slackApp.client.chat.postMessage({
-      channel: "U082FBF4MV5",
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `New inbox access request from *${session.user.name}* (${session.user.email})`,
-          },
+    // Create or update request
+    await Whitelist.findOneAndUpdate(
+      { userId: session.user.id },
+      {
+        $set: {
+          email: session.user.email,
+          status: "pending",
+          lastRequestAt: now,
+          requestedAt: existingRequest ? existingRequest.requestedAt : now,
         },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Approve",
-              },
-              style: "primary",
-              action_id: "approve_request",
-              value: JSON.stringify({
-                requestId: newRequest._id.toString(),
-                userId: session.user.id,
-                slackUserId: session.user.slackId,
-              }),
-            },
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Deny",
-              },
-              style: "danger",
-              action_id: "deny_request",
-              value: JSON.stringify({
-                requestId: newRequest._id.toString(),
-                userId: session.user.id,
-                slackUserId: session.user.slackId,
-              }),
-            },
-          ],
-        },
-      ],
-    });
+      },
+      { upsert: true }
+    );
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
