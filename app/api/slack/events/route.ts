@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { slackApp } from "@/lib/slack";
 import { Whitelist } from "@/lib/models/whitelist";
 import crypto from "crypto";
+import { connectDB } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -63,10 +64,13 @@ export async function POST(req: Request) {
       event: payload.event?.type,
     });
 
-    // Handle URL verification
+    // Handle URL verification without DB
     if (payload.type === "url_verification") {
       return NextResponse.json({ challenge: payload.challenge });
     }
+
+    // Connect to DB before any database operations
+    await connectDB();
 
     // Handle interactive components (buttons, etc.)
     if (payload.type === "block_actions") {
@@ -76,7 +80,24 @@ export async function POST(req: Request) {
         action.action_id === "approve_request" ||
         action.action_id === "deny_request"
       ) {
+        console.log("Processing request action:", {
+          actionId: action.action_id,
+          value: action.value,
+        });
+
         const { requestId, userId, slackUserId } = JSON.parse(action.value);
+
+        // First verify the request exists
+        const existingRequest = await Whitelist.findById(requestId).lean();
+        if (!existingRequest) {
+          console.error("Request not found:", requestId);
+          return NextResponse.json(
+            { error: "Request not found" },
+            { status: 404 }
+          );
+        }
+
+        // Update the request
         const request = await Whitelist.findByIdAndUpdate(
           requestId,
           {
@@ -90,14 +111,18 @@ export async function POST(req: Request) {
           { new: true }
         ).lean();
 
+        console.log("Updated request:", request);
+
         // Notify the user
-        await slackApp.client.chat.postMessage({
+        const notifyResult = await slackApp.client.chat.postMessage({
           channel: slackUserId,
           text: `Your inbox access request has been ${request!.status}`,
         });
 
+        console.log("Notification sent:", notifyResult);
+
         // Update the original message
-        await slackApp.client.chat.update({
+        const updateResult = await slackApp.client.chat.update({
           channel: payload.channel.id,
           ts: payload.message.ts,
           blocks: [
@@ -110,6 +135,8 @@ export async function POST(req: Request) {
             },
           ],
         });
+
+        console.log("Message updated:", updateResult);
 
         return NextResponse.json({ ok: true });
       }
@@ -131,6 +158,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Slack events error:", error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -8,12 +8,14 @@ const uri = process.env.MONGODB_URI;
 
 const options: mongoose.ConnectOptions = {
   serverSelectionTimeoutMS: 5000,
-  maxPoolSize: 5,
+  maxPoolSize: 10,
   minPoolSize: 1,
-  connectTimeoutMS: 5000,
-  socketTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 10000,
   retryWrites: true,
   retryReads: true,
+  maxIdleTimeMS: 10000,
+  waitQueueTimeoutMS: 10000,
 };
 
 let clientPromise: Promise<typeof mongoose>;
