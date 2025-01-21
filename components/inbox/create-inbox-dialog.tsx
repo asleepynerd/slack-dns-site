@@ -35,9 +35,7 @@ export function CreateInboxDialog({
       const response = await fetch("/api/inboxes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: `${subdomain}@hackclubber.dev`,
-        }),
+        body: JSON.stringify({ subdomain }),
       });
 
       if (!response.ok) {
