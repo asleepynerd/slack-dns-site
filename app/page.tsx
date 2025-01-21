@@ -23,14 +23,23 @@ export default async function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <AnimatedBackground />
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 bg-gradient-to-b from-zinc-900 to-black">
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent blur-3xl" />
+      </div>
 
-      <div className="relative flex min-h-screen flex-col items-center justify-center">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-          <AnimatedTitle />
-          <SignInButton />
-        </div>
+      <div className="relative">
+        <main className="container mx-auto px-4 py-16">
+          <AnimatedBackground />
+
+          <div className="relative flex min-h-screen flex-col items-center justify-center">
+            <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
+              <AnimatedTitle />
+              <SignInButton />
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

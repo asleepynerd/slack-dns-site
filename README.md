@@ -6,6 +6,7 @@ This project allows members of the Hack Club Slack to manage their subdomains ea
 
 - **Slack Authentication**: Users can log in using their Hack Club Slack credentials.
 - **Subdomain Management**: Easily request and manage subdomains for your projects.
+- **Email Inboxes**: Get your own @hackclubber.dev email address with full sending and receiving capabilities.
 - **Analytics**: Integrated analytics to track usage and performance.
 - **Responsive Design**: Built with Tailwind CSS for a responsive and modern UI.
 

@@ -24,7 +24,6 @@ const DomainSchema = new mongoose.Schema(
   }
 );
 
-
 mongoose.connection.once("open", () => {
   console.log("MongoDB connected successfully");
 });

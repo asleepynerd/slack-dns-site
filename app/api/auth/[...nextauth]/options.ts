@@ -1,9 +1,15 @@
 //@ts-nocheck
+
 import type { NextAuthOptions } from "next-auth";
 import SlackProvider from "next-auth/providers/slack";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "@/lib/mongodb";
-import NextAuth from "next-auth";
+import { MongoClient } from "mongodb";
+
+if (!process.env.MONGODB_URI) {
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
+}
+
+const client = new MongoClient(process.env.MONGODB_URI);
 
 declare module "next-auth" {
   interface Session {
@@ -25,7 +31,7 @@ declare module "next-auth/jwt" {
 }
 
 export const options: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
+  adapter: MongoDBAdapter(client),
   debug: true,
   providers: [
     SlackProvider({
@@ -34,22 +40,19 @@ export const options: NextAuthOptions = {
       authorization: {
         params: { scope: "openid profile email" },
       },
-      profile(profile) {
+      profile(profile, tokens) {
         return {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          slackId: profile["https://slack.com/user_id"] || profile.sub,
+          slackId: profile.sub,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account, profile }) {
-      if (profile) {
-        token.slackId = profile["https://slack.com/user_id"] || profile.sub;
-      }
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.slackId = user.slackId;
@@ -57,7 +60,7 @@ export const options: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session?.user) {
         session.user.id = token.id;
         session.user.slackId = token.slackId;
       }

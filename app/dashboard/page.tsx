@@ -13,13 +13,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Background effects */}
+      {}
       <div className="fixed inset-0 bg-gradient-to-b from-zinc-900 to-black">
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent blur-3xl" />
       </div>
 
-      {/* Content */}
+      {}
       <div className="relative">
         <Navbar />
         <main className="container mx-auto px-4 py-8">

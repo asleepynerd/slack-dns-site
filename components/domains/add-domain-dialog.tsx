@@ -249,7 +249,7 @@ export function AddDomainDialog({
                     case "A":
                       setARecords(firstRecord.data);
                       break;
-                    // ... handle other record types
+
                   }
                 }
               }}

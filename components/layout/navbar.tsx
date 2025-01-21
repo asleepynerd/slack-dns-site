@@ -37,12 +37,20 @@ export function Navbar() {
               Domains
             </Link>
             <Link
-              href="/email"
+              href="/forwarding"
               className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/email" ? "text-blue-500" : "text-zinc-400"
+                pathname === "/forwarding" ? "text-blue-500" : "text-zinc-400"
               }`}
             >
               Email Forwarding
+            </Link>
+            <Link
+              href="/inbox"
+              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
+                pathname === "/inbox" ? "text-blue-500" : "text-zinc-400"
+              }`}
+            >
+              Inboxes (Beta)
             </Link>
           </div>
         </div>
