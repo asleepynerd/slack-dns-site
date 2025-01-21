@@ -17,14 +17,14 @@ interface Message {
   to: string;
   body: string;
   html?: string;
-  createdAt: string;
-  receivedAt: string;
+  createdAt: string | Date;
+  receivedAt: string | Date;
   inboxId: string;
   read: boolean;
   sent: boolean;
   junk: boolean;
   deleted: boolean;
-  deletedAt?: string;
+  deletedAt?: string | Date;
   attachments?: Array<{
     filename: string;
     url: string;
@@ -36,6 +36,32 @@ function truncateText(text: string | undefined | null, maxLength: number) {
   if (!text) return "";
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + "...";
+}
+
+function formatDate(date: string | Date | undefined): string {
+  if (!date) {
+    const now = new Date().toLocaleString();
+    console.warn("Missing date, using current time:", now);
+    return now;
+  }
+
+  try {
+    // If it's already a Date object
+    if (date instanceof Date) {
+      return date.toLocaleString();
+    }
+
+    // If it's a string, try to parse it
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      console.error("Invalid date string:", date);
+      return new Date().toLocaleString(); // Fallback to current time
+    }
+    return parsedDate.toLocaleString();
+  } catch (error) {
+    console.error("Date formatting error:", error, "for date:", date);
+    return new Date().toLocaleString(); // Fallback to current time
+  }
 }
 
 export function MessageList({ inboxId }: { inboxId: string }) {
@@ -156,9 +182,7 @@ export function MessageList({ inboxId }: { inboxId: string }) {
                           : `From: ${message.from}`}
                       </div>
                       <div className="text-sm text-zinc-500">
-                        {new Date(
-                          message.receivedAt || message.createdAt
-                        ).toLocaleString()}
+                        {formatDate(message.receivedAt || message.createdAt)}
                       </div>
                     </div>
                   </div>

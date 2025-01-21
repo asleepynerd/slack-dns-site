@@ -74,13 +74,14 @@ export async function POST(req: Request) {
 
     // Create message document
     const message = new Message({
-      inboxId: inbox._id.toString(),
+      inboxId: inbox._id,
       from: sender,
       to: recipient,
       subject,
       body,
       html,
       receivedAt: new Date(),
+      createdAt: new Date(),
     });
 
     await message.save();

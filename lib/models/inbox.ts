@@ -29,6 +29,7 @@ const messageSchema = new mongoose.Schema({
   ],
   receivedAt: { type: Date, default: Date.now },
   read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 // Add a pre-save hook to sync email and address
