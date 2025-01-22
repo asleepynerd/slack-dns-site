@@ -10,16 +10,31 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { CDNFile } from "@/lib/models/cdn";
 import { connectDB } from "@/lib/db";
 
+// Initialize S3 client with explicit credentials
 const s3 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
+  forcePathStyle: true, // Required for R2
 });
 
+// Verify credentials are available
+if (
+  !process.env.R2_ACCESS_KEY_ID ||
+  !process.env.R2_SECRET_ACCESS_KEY ||
+  !process.env.R2_ACCOUNT_ID
+) {
+  console.error("Missing R2 credentials");
+}
+
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || "cdn-hack-pet";
+
+export const config = {
+  maxDuration: 30, // Increase timeout to 30 seconds
+};
 
 export async function POST(req: Request) {
   try {
@@ -41,6 +56,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Slack ID not found" },
         { status: 400 }
+      );
+    }
+
+    // Verify R2 credentials are available
+    if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+      console.error("R2 credentials not available");
+      return NextResponse.json(
+        { error: "Storage configuration error" },
+        { status: 500 }
       );
     }
 
@@ -116,13 +140,30 @@ export async function POST(req: Request) {
       ContentType: mimeType,
     });
 
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
-
-    return NextResponse.json({ uploadUrl, fileId: file._id });
-  } catch (error) {
+    try {
+      const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+      return NextResponse.json({ uploadUrl, fileId: file._id });
+    } catch (error: any) {
+      console.error("Failed to generate presigned URL:", error);
+      // Clean up the database record if we couldn't get a URL
+      await file.deleteOne();
+      return NextResponse.json(
+        {
+          error: "Failed to get upload URL",
+          details:
+            process.env.NODE_ENV === "development" ? error.message : undefined,
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error("Get upload URL error:", error);
     return NextResponse.json(
-      { error: "Failed to get upload URL" },
+      {
+        error: "Failed to get upload URL",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
       { status: 500 }
     );
   }
