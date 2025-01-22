@@ -23,7 +23,11 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect root path of hackclubber.dev to domains.sleepy.engineer
-  if (hostname === "hackclubber.dev" && path === "/") {
+  if (
+    hostname === "hackclubber.dev" &&
+    path === "/" &&
+    !request.url.includes("domains.sleepy.engineer")
+  ) {
     return NextResponse.redirect("https://domains.sleepy.engineer");
   }
 
