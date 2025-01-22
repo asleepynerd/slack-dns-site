@@ -10,7 +10,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { CDNFile } from "@/lib/models/cdn";
 import { connectDB } from "@/lib/db";
 
-// Initialize S3 client with explicit credentials
 const s3 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -18,10 +17,9 @@ const s3 = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
-  forcePathStyle: true, // Required for R2
+  forcePathStyle: true,
 });
 
-// Verify credentials are available
 if (
   !process.env.R2_ACCESS_KEY_ID ||
   !process.env.R2_SECRET_ACCESS_KEY ||
@@ -31,10 +29,6 @@ if (
 }
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || "cdn-hack-pet";
-
-export const config = {
-  maxDuration: 30, // Increase timeout to 30 seconds
-};
 
 export async function POST(req: Request) {
   try {
@@ -59,7 +53,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify R2 credentials are available
     if (!process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
       console.error("R2 credentials not available");
       return NextResponse.json(
@@ -74,7 +67,6 @@ export async function POST(req: Request) {
     const mimeType = contentType || "application/octet-stream";
     const prefixedFilename = `${slackId}/${filename}`;
 
-    // Check if file already exists
     const existingFile = await CDNFile.findOne({
       key: prefixedFilename,
       isDeleted: false,
@@ -95,7 +87,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create database record
     const file = new CDNFile({
       userId: session.user.id,
       slackId,
@@ -113,7 +104,6 @@ export async function POST(req: Request) {
       await file.save();
     } catch (error: any) {
       if (error.code === 11000) {
-        // Handle race condition where file was created between our check and save
         const existing = await CDNFile.findOne({ key: prefixedFilename });
         if (existing) {
           return NextResponse.json(
@@ -133,7 +123,6 @@ export async function POST(req: Request) {
       throw error;
     }
 
-    // Generate presigned URL
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: prefixedFilename,
@@ -145,7 +134,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ uploadUrl, fileId: file._id });
     } catch (error: any) {
       console.error("Failed to generate presigned URL:", error);
-      // Clean up the database record if we couldn't get a URL
       await file.deleteOne();
       return NextResponse.json(
         {
