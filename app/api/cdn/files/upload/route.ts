@@ -48,15 +48,36 @@ export async function POST(req: Request) {
 
     const extension = filename.split(".").pop()?.toLowerCase() || "";
     const mimeType = contentType || "application/octet-stream";
-
     const prefixedFilename = `${slackId}/${filename}`;
 
+    // Check if file already exists
+    const existingFile = await CDNFile.findOne({
+      key: prefixedFilename,
+      isDeleted: false,
+    });
+
+    if (existingFile) {
+      return NextResponse.json(
+        {
+          error: "File already exists",
+          message: "A file with this name already exists in your directory",
+          existingFile: {
+            id: existingFile._id,
+            url: existingFile.url,
+            uploadedAt: existingFile.createdAt,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    // Create database record
     const file = new CDNFile({
       userId: session.user.id,
       slackId,
       key: prefixedFilename,
       filename,
-      contentType,
+      contentType: mimeType,
       mimeType,
       extension,
       size,
@@ -64,12 +85,35 @@ export async function POST(req: Request) {
       lastModified: new Date(),
     });
 
-    await file.save();
+    try {
+      await file.save();
+    } catch (error: any) {
+      if (error.code === 11000) {
+        // Handle race condition where file was created between our check and save
+        const existing = await CDNFile.findOne({ key: prefixedFilename });
+        if (existing) {
+          return NextResponse.json(
+            {
+              error: "File already exists",
+              message: "A file with this name was just uploaded",
+              existingFile: {
+                id: existing._id,
+                url: existing.url,
+                uploadedAt: existing.createdAt,
+              },
+            },
+            { status: 409 }
+          );
+        }
+      }
+      throw error;
+    }
 
+    // Generate presigned URL
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: prefixedFilename,
-      ContentType: contentType,
+      ContentType: mimeType,
     });
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
