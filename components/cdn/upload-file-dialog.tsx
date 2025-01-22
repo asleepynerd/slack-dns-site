@@ -44,15 +44,15 @@ export function UploadFileDialog({
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      if (customPath) {
-        formData.append("filename", customPath);
-      }
-
-      const response = await fetch("/api/cdn/files/upload/proxy", {
+      // First get a presigned URL
+      const response = await fetch("/api/cdn/files/upload", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: customPath || selectedFile.name,
+          contentType: selectedFile.type,
+          size: selectedFile.size,
+        }),
       });
 
       const data = await response.json();
@@ -85,7 +85,20 @@ export function UploadFileDialog({
           return;
         }
 
-        throw new Error(data.message || "Upload failed");
+        throw new Error(data.message || "Failed to get upload URL");
+      }
+
+      // Upload directly to R2 using the presigned URL
+      const uploadResponse = await fetch(data.uploadUrl, {
+        method: "PUT",
+        body: selectedFile,
+        headers: {
+          "Content-Type": selectedFile.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file");
       }
 
       toast({
