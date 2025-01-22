@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
   // Handle short links on both domains
   // Includes basic alphanumeric, emoji (Unicode range), and Japanese characters (Hiragana, Katakana, Kanji)
   if (
+    path !== "/links" &&
     /^\/(?:[a-zA-Z0-9\u{1F300}-\u{1F9FF}\u{3000}-\u{30FF}\u{3040}-\u{309F}\u{4E00}-\u{9FAF}]){6}$/u.test(
       path
     )
