@@ -52,6 +52,14 @@ export function Navbar() {
             >
               Inboxes (Beta)
             </Link>
+            <Link
+              href="/links"
+              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
+                pathname === "/links" ? "text-blue-500" : "text-zinc-400"
+              }`}
+            >
+              Links (Beta)
+            </Link>
           </div>
         </div>
 
