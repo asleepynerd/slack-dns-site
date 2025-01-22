@@ -6,6 +6,11 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host");
   const path = request.nextUrl.pathname;
 
+  // Redirect root path of hackclubber.dev to domains.sleepy.engineer
+  if (hostname === "hackclubber.dev" && path === "/") {
+    return NextResponse.redirect("https://domains.sleepy.engineer");
+  }
+
   // Handle short links on both domains
   // Includes basic alphanumeric, emoji (Unicode range), and Japanese characters (Hiragana, Katakana, Kanji)
   if (
