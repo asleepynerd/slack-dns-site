@@ -16,6 +16,7 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || "cdn-hack-pet";
 const CDN_DOMAIN = "cdn.hack.pet";
+// WHY WONT THIS FUCKING WORK
 
 export async function GET() {
   try {
