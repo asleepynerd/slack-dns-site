@@ -6,9 +6,9 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host");
   const path = request.nextUrl.pathname;
 
-  // Redirect root path of hackclubber.dev to domains.sleepy.engineer
-  if (hostname === "hackclubber.dev" && path === "/") {
-    return NextResponse.redirect("https://domains.sleepy.engineer");
+  // Only allow /links management page on hackclubber.dev
+  if (hostname !== "hackclubber.dev" && path.startsWith("/links")) {
+    return NextResponse.redirect("https://hackclubber.dev/links");
   }
 
   // Handle short links on both domains
@@ -22,9 +22,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL(`/api/l${path}`, request.url));
   }
 
-  // Only allow /links management page on hackclubber.dev
-  if (hostname !== "hackclubber.dev" && path.startsWith("/links")) {
-    return NextResponse.redirect("https://hackclubber.dev/links");
+  // Redirect root path of hackclubber.dev to domains.sleepy.engineer
+  if (hostname === "hackclubber.dev" && path === "/") {
+    return NextResponse.redirect("https://domains.sleepy.engineer");
   }
 
   return NextResponse.next();
