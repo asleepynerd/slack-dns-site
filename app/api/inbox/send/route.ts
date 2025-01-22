@@ -44,7 +44,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    // Create message first
     const message = new Message({
       inboxId: inbox._id,
       from,
@@ -55,12 +54,10 @@ export async function POST(req: Request) {
       createdAt: new Date(),
     });
 
-    // Save message to database
     await message.save();
     console.log("5. Saved message to database");
 
     try {
-      // Send email via Mailgun
       await sendEmail({
         from,
         to,
@@ -69,14 +66,12 @@ export async function POST(req: Request) {
       });
       console.log("6. Sent email via Mailgun");
 
-      // Update message status
       message.sent = true;
       await message.save();
 
       return NextResponse.json({ status: "success" });
     } catch (error) {
       console.error("Failed to send email:", error);
-      // Mark message as failed but don't delete it
       message.sent = false;
       await message.save();
       throw error;

@@ -44,7 +44,6 @@ export function UploadFileDialog({
 
     setIsUploading(true);
     try {
-      // First get a presigned URL
       const response = await fetch("/api/cdn/files/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +87,6 @@ export function UploadFileDialog({
         throw new Error(data.message || "Failed to get upload URL");
       }
 
-      // Upload directly to R2 using the presigned URL
       const uploadResponse = await fetch(data.uploadUrl, {
         method: "PUT",
         body: selectedFile,

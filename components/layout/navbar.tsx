@@ -66,7 +66,7 @@ export function Navbar() {
                 pathname === "/cdn" ? "text-blue-500" : "text-zinc-400"
               }`}
             >
-              CDN (Beta)
+              CDN
             </Link>
           </div>
         </div>
