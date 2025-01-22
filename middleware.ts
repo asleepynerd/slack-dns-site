@@ -6,15 +6,17 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host");
   const path = request.nextUrl.pathname;
 
-  // Only allow /links management page on hackclubber.dev
-  if (hostname !== "hackclubber.dev" && path.startsWith("/links")) {
-    return NextResponse.redirect("https://hackclubber.dev/links");
-  }
+  // // Handle /links path first - highest priority
+  // if (path.startsWith("/links")) {
+  //   if (hostname !== "hackclubber.dev") {
+  //     return NextResponse.redirect("https://hackclubber.dev/links");
+  //   }
+  //   return NextResponse.next();
+  // }
 
   // Handle short links on both domains
   // Includes basic alphanumeric, emoji (Unicode range), and Japanese characters (Hiragana, Katakana, Kanji)
   if (
-    path !== "/links" &&
     /^\/(?:[a-zA-Z0-9\u{1F300}-\u{1F9FF}\u{3000}-\u{30FF}\u{3040}-\u{309F}\u{4E00}-\u{9FAF}]){6}$/u.test(
       path
     )

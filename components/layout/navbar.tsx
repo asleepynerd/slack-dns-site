@@ -60,6 +60,14 @@ export function Navbar() {
             >
               Links (Beta)
             </Link>
+            <Link
+              href="/cdn"
+              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
+                pathname === "/cdn" ? "text-blue-500" : "text-zinc-400"
+              }`}
+            >
+              CDN (Beta)
+            </Link>
           </div>
         </div>
 
