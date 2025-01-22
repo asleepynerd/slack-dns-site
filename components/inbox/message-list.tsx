@@ -25,21 +25,19 @@ function formatDate(date: string | Date | undefined): string {
   }
 
   try {
-    // If it's already a Date object
     if (date instanceof Date) {
       return date.toLocaleString();
     }
 
-    // If it's a string, try to parse it
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
       console.error("Invalid date string:", date);
-      return new Date().toLocaleString(); // Fallback to current time
+      return new Date().toLocaleString();
     }
     return parsedDate.toLocaleString();
   } catch (error) {
     console.error("Date formatting error:", error, "for date:", date);
-    return new Date().toLocaleString(); // Fallback to current time
+    return new Date().toLocaleString(); 
   }
 }
 

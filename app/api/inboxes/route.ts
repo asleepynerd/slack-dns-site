@@ -42,7 +42,6 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Check whitelist status first
     const whitelist = await Whitelist.findOne({
       userId: session.user.id,
       status: "approved",
@@ -66,7 +65,6 @@ export async function POST(req: Request) {
     const email = `${subdomain}@hackclubber.dev`;
     console.log("Constructed email:", email);
 
-    // Validate email format (keep this as a safety check)
     if (!email.endsWith("@hackclubber.dev")) {
       return NextResponse.json(
         { error: "Invalid email domain" },
@@ -74,7 +72,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if email already exists
     const existingInbox = await Inbox.findOne({
       $or: [{ email }, { address: email }],
     }).lean();
@@ -86,11 +83,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create new inbox with both email and address
     const inbox = new Inbox({
       userId: session.user.id,
       email: email,
-      address: email, // Set address same as email
+      address: email,
       active: true,
       createdAt: new Date(),
     });

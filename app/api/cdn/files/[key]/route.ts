@@ -30,7 +30,6 @@ export async function DELETE(
 
     const key = decodeURIComponent(params.key);
 
-    // Find and verify file ownership
     const file = await CDNFile.findOne({
       key,
       userId: session.user.id,
@@ -41,7 +40,6 @@ export async function DELETE(
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Delete from R2
     const command = new DeleteObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
@@ -49,7 +47,6 @@ export async function DELETE(
 
     await s3.send(command);
 
-    // Soft delete in database
     await file.softDelete();
 
     return NextResponse.json({ status: "success" });

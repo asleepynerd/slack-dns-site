@@ -34,7 +34,6 @@ export function UploadFileDialog({
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      // Set a default custom path based on the file name
       setCustomPath(file.name);
     }
   };
@@ -45,40 +44,55 @@ export function UploadFileDialog({
 
     setIsUploading(true);
     try {
-      // First get the upload URL
-      const response = await fetch(`/api/cdn/files/upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: customPath || selectedFile.name,
-          contentType: selectedFile.type,
-          size: selectedFile.size,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get upload URL");
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      if (customPath) {
+        formData.append("filename", customPath);
       }
 
-      const { uploadUrl } = await response.json();
-
-      // Upload the file directly to R2
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        body: selectedFile,
-        headers: {
-          "Content-Type": selectedFile.type,
-        },
+      const response = await fetch("/api/cdn/files/upload/proxy", {
+        method: "POST",
+        body: formData,
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          toast({
+            title: "File already exists",
+            description: data.message,
+            variant: "default",
+          });
+          return;
+        }
+
+        if (response.status === 413) {
+          toast({
+            title: "File too large",
+            description: data.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (response.status === 415) {
+          toast({
+            title: "Invalid file type",
+            description: data.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        throw new Error(data.message || "Upload failed");
       }
 
       toast({
         title: "Success",
         description: "File uploaded successfully",
       });
+
       onFileUploaded();
       onOpenChange(false);
       setSelectedFile(null);
@@ -87,10 +101,11 @@ export function UploadFileDialog({
         fileInputRef.current.value = "";
       }
     } catch (error) {
+      console.error("Upload error:", error);
       toast({
-        title: "Error",
+        title: "Upload failed",
         description:
-          error instanceof Error ? error.message : "Failed to upload file",
+          error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
     } finally {

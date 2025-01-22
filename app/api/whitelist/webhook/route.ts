@@ -55,7 +55,6 @@ export async function POST(req: Request) {
       { new: true }
     ).lean();
 
-    // Notify the user
     await slackApp.client.chat.postMessage({
       channel: slackUserId,
       text: `Your inbox access request has been ${request!.status}`,

@@ -13,7 +13,6 @@ export async function GET() {
 
     await connectDB();
 
-    // Get user's storage stats
     const stats = await CDNFile.getUserStorageUsed(session.user.id);
 
     return NextResponse.json(stats);

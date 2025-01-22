@@ -7,7 +7,7 @@ import { connectDB } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
-export const preferredRegion = "iad1"; // US East (N. Virginia)
+export const preferredRegion = "iad1";
 
 function verifySlackRequest(req: Request, body: string) {
   const timestamp = req.headers.get("x-slack-request-timestamp");
@@ -15,7 +15,6 @@ function verifySlackRequest(req: Request, body: string) {
 
   if (!timestamp || !signature) return false;
 
-  // Verify request is not older than 5 minutes
   const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
   if (parseInt(timestamp) < fiveMinutesAgo) return false;
 
@@ -38,7 +37,6 @@ export async function POST(req: Request) {
     const body = await req.text();
     const contentType = req.headers.get("content-type") || "";
 
-    // Quick verification before processing
     if (!verifySlackRequest(req, body)) {
       console.error("Invalid Slack signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
@@ -51,7 +49,6 @@ export async function POST(req: Request) {
       if (payloadStr) {
         payload = JSON.parse(payloadStr);
       } else {
-        // Handle non-interactive messages
         const bodyParams = Object.fromEntries(params.entries());
         payload = bodyParams;
       }
@@ -64,15 +61,12 @@ export async function POST(req: Request) {
       event: payload.event?.type,
     });
 
-    // Handle URL verification without DB
     if (payload.type === "url_verification") {
       return NextResponse.json({ challenge: payload.challenge });
     }
 
-    // Connect to DB before any database operations
     await connectDB();
 
-    // Handle interactive components (buttons, etc.)
     if (payload.type === "block_actions") {
       const action = payload.actions[0];
 
@@ -87,7 +81,6 @@ export async function POST(req: Request) {
 
         const { requestId, userId, slackUserId } = JSON.parse(action.value);
 
-        // First verify the request exists
         const existingRequest = await Whitelist.findById(requestId).lean();
         if (!existingRequest) {
           console.error("Request not found:", requestId);
@@ -97,7 +90,6 @@ export async function POST(req: Request) {
           );
         }
 
-        // Update the request
         const request = await Whitelist.findByIdAndUpdate(
           requestId,
           {
@@ -113,7 +105,6 @@ export async function POST(req: Request) {
 
         console.log("Updated request:", request);
 
-        // Notify the user
         const notifyResult = await slackApp.client.chat.postMessage({
           channel: slackUserId,
           text: `Your inbox access request has been ${request!.status}`,
@@ -121,7 +112,6 @@ export async function POST(req: Request) {
 
         console.log("Notification sent:", notifyResult);
 
-        // Update the original message
         const updateResult = await slackApp.client.chat.update({
           channel: payload.channel.id,
           ts: payload.message.ts,
@@ -142,23 +132,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // Handle events
     if (payload.type === "event_callback") {
       const { event } = payload;
 
       switch (event.type) {
         case "app_home_opened":
-          // Handle app home opened event
           await handleAppHomeOpened(event);
           break;
-        // Add other event handlers as needed
       }
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Slack events error:", error);
-    // Log more details about the error
     if (error instanceof Error) {
       console.error("Error details:", {
         name: error.name,
@@ -175,7 +161,6 @@ export async function POST(req: Request) {
 
 async function handleAppHomeOpened(event: any) {
   try {
-    // Implement minimal app home view
     await slackApp.client.views.publish({
       user_id: event.user,
       view: {

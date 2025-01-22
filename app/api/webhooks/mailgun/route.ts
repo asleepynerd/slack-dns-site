@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-export const preferredRegion = "iad1"; // US East (N. Virginia)
+export const preferredRegion = "iad1"; 
 
 interface LeanInbox {
   _id: mongoose.Types.ObjectId;
@@ -32,7 +32,6 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
 
-    // Quick signature verification before any DB operations
     const timestamp = formData.get("timestamp") as string;
     const token = formData.get("token") as string;
     const signature = formData.get("signature") as string;
@@ -49,7 +48,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    // Extract essential data first
     const recipient = formData.get("recipient") as string;
     const sender = formData.get("sender") as string;
     const subject = formData.get("subject") as string;
@@ -72,7 +70,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    // Create message document
     const message = new Message({
       inboxId: inbox._id,
       from: sender,

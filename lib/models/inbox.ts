@@ -32,7 +32,6 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// Add a pre-save hook to sync email and address
 inboxSchema.pre("save", function (next) {
   if (this.email && !this.address) {
     this.address = this.email;
@@ -46,7 +45,6 @@ inboxSchema.pre("save", function (next) {
 messageSchema.index({ inboxId: 1, folder: 1, createdAt: -1 });
 messageSchema.index({ inboxId: 1, createdAt: -1 });
 
-// Remove the Draft model and only export Inbox and Message
 export const Inbox =
   mongoose.models.Inbox || mongoose.model("Inbox", inboxSchema);
 export const Message =

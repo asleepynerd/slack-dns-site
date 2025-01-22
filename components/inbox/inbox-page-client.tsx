@@ -28,7 +28,7 @@ export function InboxPageClient() {
   }, []);
 
   if (loading) {
-    return null; // or a loading spinner
+    return null; 
   }
 
   if (showRules) {

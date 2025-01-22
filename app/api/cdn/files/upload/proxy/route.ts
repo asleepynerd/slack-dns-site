@@ -20,12 +20,6 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || "cdn-hack-pet";
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable body parsing, handle streaming directly
-  },
-};
-
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(options);
@@ -49,14 +43,11 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Get file extension and mime type
     const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
     const mimeType = file.type || "application/octet-stream";
 
-    // Prefix the filename with the user's Slack ID
     const prefixedFilename = `${slackId}/${file.name}`;
 
-    // Check if file already exists
     const existingFile = await CDNFile.findOne({
       key: prefixedFilename,
       isDeleted: false,
@@ -77,7 +68,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Upload to R2 first
     const buffer = await file.arrayBuffer();
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
@@ -88,7 +78,6 @@ export async function POST(req: Request) {
 
     await s3.send(command);
 
-    // Create database record after successful upload
     const fileRecord = new CDNFile({
       userId: session.user.id,
       slackId,
@@ -106,7 +95,6 @@ export async function POST(req: Request) {
       await fileRecord.save();
     } catch (error: any) {
       if (error.code === 11000) {
-        // If we hit a race condition, the file is already saved, so we can return success
         const existing = await CDNFile.findOne({ key: prefixedFilename });
         if (existing) {
           return NextResponse.json({
@@ -127,7 +115,6 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Upload error:", error);
 
-    // Handle specific error cases
     if (error instanceof Error) {
       if (error.message.includes("file size")) {
         return NextResponse.json(

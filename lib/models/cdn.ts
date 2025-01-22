@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Model } from "mongoose";
 
 interface ICDNFile {
   userId: string;
@@ -19,7 +19,24 @@ interface ICDNFile {
   bandwidth: number;
 }
 
-const cdnFileSchema = new mongoose.Schema<ICDNFile>({
+interface CDNFileDocument extends ICDNFile, Document {
+  url: string;
+  softDelete(): Promise<void>;
+  trackView(bytes: number): Promise<void>;
+}
+
+interface CDNFileModel extends Model<CDNFileDocument> {
+  getActiveFiles(userId: string): Promise<CDNFileDocument[]>;
+  getByKey(key: string): Promise<CDNFileDocument | null>;
+  getPopularFiles(limit?: number): Promise<CDNFileDocument[]>;
+  getUserStorageUsed(userId: string): Promise<{
+    totalSize: number;
+    totalBandwidth: number;
+    fileCount: number;
+  }>;
+}
+
+const cdnFileSchema = new mongoose.Schema<CDNFileDocument>({
   userId: { type: String, required: true },
   slackId: { type: String, required: true },
   key: { type: String, required: true, unique: true },
@@ -35,10 +52,9 @@ const cdnFileSchema = new mongoose.Schema<ICDNFile>({
   hash: { type: String },
   views: { type: Number, default: 0 },
   lastViewed: { type: Date },
-  bandwidth: { type: Number, default: 0 }, // Total bytes transferred
+  bandwidth: { type: Number, default: 0 }, 
 });
 
-// Create indexes for common queries
 cdnFileSchema.index({ userId: 1, isDeleted: 1 });
 cdnFileSchema.index({ slackId: 1, isDeleted: 1 });
 cdnFileSchema.index({ key: 1 }, { unique: true });
@@ -46,27 +62,26 @@ cdnFileSchema.index({ hash: 1 });
 cdnFileSchema.index({ extension: 1 });
 cdnFileSchema.index({ mimeType: 1 });
 
-// Virtual for the full URL
-cdnFileSchema.virtual("url").get(function () {
+cdnFileSchema.virtual("url").get(function (this: CDNFileDocument) {
   return `https://cdn.hack.pet/${this.key}`;
 });
 
-// Method to soft delete a file
-cdnFileSchema.methods.softDelete = async function () {
+cdnFileSchema.methods.softDelete = async function (this: CDNFileDocument) {
   this.isDeleted = true;
   this.deletedAt = new Date();
   await this.save();
 };
 
-// Method to track a view
-cdnFileSchema.methods.trackView = async function (bytes: number) {
+cdnFileSchema.methods.trackView = async function (
+  this: CDNFileDocument,
+  bytes: number
+) {
   this.views += 1;
   this.lastViewed = new Date();
   this.bandwidth += bytes;
   await this.save();
 };
 
-// Static method to get active files for a user
 cdnFileSchema.statics.getActiveFiles = async function (userId: string) {
   return this.find({
     userId,
@@ -74,7 +89,6 @@ cdnFileSchema.statics.getActiveFiles = async function (userId: string) {
   }).sort({ lastModified: -1 });
 };
 
-// Static method to get file by key
 cdnFileSchema.statics.getByKey = async function (key: string) {
   return this.findOne({
     key,
@@ -82,7 +96,6 @@ cdnFileSchema.statics.getByKey = async function (key: string) {
   });
 };
 
-// Static method to get popular files
 cdnFileSchema.statics.getPopularFiles = async function (limit = 10) {
   return this.find({
     isDeleted: false,
@@ -91,7 +104,6 @@ cdnFileSchema.statics.getPopularFiles = async function (limit = 10) {
     .limit(limit);
 };
 
-// Static method to get total storage used by user
 cdnFileSchema.statics.getUserStorageUsed = async function (userId: string) {
   const result = await this.aggregate([
     {
@@ -112,5 +124,8 @@ cdnFileSchema.statics.getUserStorageUsed = async function (userId: string) {
   return result[0] || { totalSize: 0, totalBandwidth: 0, fileCount: 0 };
 };
 
-export const CDNFile =
-  mongoose.models.CDNFile || mongoose.model<ICDNFile>("CDNFile", cdnFileSchema);
+export const CDNFile = (mongoose.models.CDNFile ||
+  mongoose.model<CDNFileDocument, CDNFileModel>(
+    "CDNFile",
+    cdnFileSchema
+  )) as CDNFileModel;

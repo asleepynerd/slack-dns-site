@@ -27,7 +27,6 @@ export async function POST(req: Request) {
 
     const { inboxId, toEmail, subject, text, html } = await req.json();
 
-    // Verify inbox ownership
     const inbox = await Inbox.findOne({
       _id: inboxId,
       userId: session.user.id,
@@ -53,7 +52,6 @@ export async function POST(req: Request) {
 
     await message.save();
 
-    // Send email logic here...
 
     return NextResponse.json({ status: "success" });
   } catch (error) {

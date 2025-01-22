@@ -34,10 +34,8 @@ export async function GET() {
 
     await connectDB();
 
-    // Get files from database
     const files = await CDNFile.getActiveFiles(session.user.id);
 
-    // Map files to response format
     const mappedFiles = files.map((file) => ({
       key: file.key,
       displayKey: file.filename,

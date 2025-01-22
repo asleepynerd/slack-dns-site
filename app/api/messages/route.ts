@@ -27,7 +27,6 @@ export async function GET(req: Request) {
 
     await connectDB();
 
-    // First verify the inbox belongs to the user
     const inbox = await Inbox.findOne({
       _id: new mongoose.Types.ObjectId(inboxId),
       userId: session.user.id,
@@ -38,7 +37,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    // Build query based on folder
     let query: any = { inboxId: inbox._id.toString() };
 
     switch (folder) {

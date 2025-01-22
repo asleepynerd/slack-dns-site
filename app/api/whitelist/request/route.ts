@@ -23,7 +23,6 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Check for existing request
     const existingRequest = await Whitelist.findOne({
       userId: session.user.id,
     })
@@ -33,7 +32,6 @@ export async function POST(req: Request) {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // Check if lastRequestAt exists and is within 24 hours
     if (
       existingRequest?.lastRequestAt &&
       new Date(existingRequest.lastRequestAt) > twentyFourHoursAgo
@@ -44,7 +42,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create or update request
     const updatedRequest = await Whitelist.findOneAndUpdate(
       { userId: session.user.id },
       {
@@ -59,9 +56,8 @@ export async function POST(req: Request) {
       { upsert: true, new: true }
     ).lean();
 
-    // Send Slack notification
     await slackApp.client.chat.postMessage({
-      channel: "U082FBF4MV5", // Your admin user ID
+      channel: "U082FBF4MV5", 
       blocks: [
         {
           type: "section",

@@ -24,13 +24,11 @@ export async function GET(
 
     await connectDB();
 
-    // Find file in database
     const file = await CDNFile.getByKey(key);
     if (!file) {
       return new NextResponse("File not found", { status: 404 });
     }
 
-    // Get file from R2
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
@@ -38,7 +36,6 @@ export async function GET(
 
     const obj = await s3.send(command);
 
-    // Set response headers
     const headers = new Headers();
     if (obj.ContentType) {
       headers.set("Content-Type", obj.ContentType);
@@ -50,16 +47,13 @@ export async function GET(
       headers.set("Last-Modified", obj.LastModified.toUTCString());
     }
 
-    // Set caching headers
-    headers.set("Cache-Control", "public, max-age=31536000"); // 1 year
+    headers.set("Cache-Control", "public, max-age=31536000"); 
     headers.set("Access-Control-Allow-Origin", "*");
 
-    // Track the view asynchronously
     if (obj.ContentLength) {
       file.trackView(obj.ContentLength).catch(console.error);
     }
 
-    // Stream the response
     if (obj.Body instanceof Readable) {
       return new NextResponse(obj.Body as any, { headers });
     }

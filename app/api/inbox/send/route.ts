@@ -18,7 +18,6 @@ export async function POST(req: Request) {
     }
     console.log("2. Session verified:", session.user.email);
 
-    // Parse JSON body instead of form data
     const { from, to, subject, text } = await req.json();
     console.log("3. Parsed request body:", { from, to, subject });
 
@@ -41,7 +40,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
-    // Create and save message
     const message = new Message({
       inboxId: inbox._id,
       from,
@@ -54,7 +52,6 @@ export async function POST(req: Request) {
     await message.save();
     console.log("5. Saved message to database");
 
-    // Send email
     await sendEmail({
       from,
       to,

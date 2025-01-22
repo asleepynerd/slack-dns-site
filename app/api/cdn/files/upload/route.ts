@@ -36,7 +36,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get the user's Slack ID from the session
     const slackId = session.user.slackId;
     if (!slackId) {
       return NextResponse.json(
@@ -47,14 +46,11 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // Get file extension
     const extension = filename.split(".").pop()?.toLowerCase() || "";
     const mimeType = contentType || "application/octet-stream";
 
-    // Prefix the filename with the user's Slack ID
     const prefixedFilename = `${slackId}/${filename}`;
 
-    // Create database record
     const file = new CDNFile({
       userId: session.user.id,
       slackId,
@@ -70,7 +66,6 @@ export async function POST(req: Request) {
 
     await file.save();
 
-    // Create a presigned URL for uploading
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: prefixedFilename,

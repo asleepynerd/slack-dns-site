@@ -15,7 +15,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if request is from hackclubber.dev
     const host = req.headers.get("host");
     if (host !== "hackclubber.dev") {
       return NextResponse.json(
@@ -34,11 +33,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate a unique short code
     let shortCode;
     let exists = true;
     while (exists) {
-      shortCode = nanoid(6); // 6 character code
+      shortCode = nanoid(6);
       exists = (await Link.exists({ shortCode })) !== null;
     }
 
@@ -71,7 +69,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if request is from hackclubber.dev
     const host = req.headers.get("host");
     if (host !== "hackclubber.dev") {
       return NextResponse.json(
