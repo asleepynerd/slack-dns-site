@@ -3,10 +3,12 @@ import { getServerSession } from "next-auth";
 import { sendEmail } from "@/lib/mailgun";
 import { Message, Inbox } from "@/lib/models/inbox";
 import { options } from "../../auth/[...nextauth]/options";
+import { connectDB } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const preferredRegion = "auto";
+export const maxDuration = 30;
+export const preferredRegion = "iad1";
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +30,8 @@ export async function POST(req: Request) {
       );
     }
 
+    await connectDB();
+
     const inbox = await Inbox.findOne({
       $or: [
         { email: from, userId: session.user.id },
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
     }
 
+    // Create message first
     const message = new Message({
       inboxId: inbox._id,
       from,
@@ -49,18 +54,33 @@ export async function POST(req: Request) {
       sent: true,
       createdAt: new Date(),
     });
+
+    // Save message to database
     await message.save();
     console.log("5. Saved message to database");
 
-    await sendEmail({
-      from,
-      to,
-      subject,
-      text,
-    });
-    console.log("6. Sent email via Mailgun");
+    try {
+      // Send email via Mailgun
+      await sendEmail({
+        from,
+        to,
+        subject,
+        text,
+      });
+      console.log("6. Sent email via Mailgun");
 
-    return NextResponse.json({ status: "success" });
+      // Update message status
+      message.sent = true;
+      await message.save();
+
+      return NextResponse.json({ status: "success" });
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      // Mark message as failed but don't delete it
+      message.sent = false;
+      await message.save();
+      throw error;
+    }
   } catch (error) {
     console.error("Send error:", error);
     return NextResponse.json(
