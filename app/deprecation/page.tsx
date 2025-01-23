@@ -101,8 +101,8 @@ export default function DeprecationPage() {
                   Please download a backup of your data before {SHUTDOWN_DATE}.
                   This includes your:
                   <br />
-                  DNS records, email forwarding routes, link shortcuts, and CDN
-                  file listings.
+                  DNS records, email forwarding routes, link shortcuts, inboxes,
+                  and CDN file listings.
                 </p>
                 <div className="flex justify-center">
                   <Button
