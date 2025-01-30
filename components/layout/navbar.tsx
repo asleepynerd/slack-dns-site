@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,91 +14,117 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 export function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-sm">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-8">
-          <h1 className="text-2xl font-bold text-white">
-            Subdomains for <span className="text-blue-500">Hackclubbers</span>
-          </h1>
+    <nav className="bg-zinc-900/50 border-b border-zinc-800">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo/Title - always visible */}
+          <div className="flex-shrink-0">
+            <Link href="/" className="text-white font-bold">
+              Subdomains for Hackclubbers
+            </Link>
+          </div>
 
-          <div className="flex space-x-6">
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-zinc-400 hover:text-white"
+            >
+              {isOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
+
+          {/* Desktop navigation - hidden on mobile */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
             <Link
               href="/dashboard"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/dashboard" ? "text-blue-500" : "text-zinc-400"
-              }`}
+              className="text-zinc-300 hover:text-white px-3 py-2"
             >
-              Domains
+              Subdomains
             </Link>
             <Link
               href="/forwarding"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/forwarding" ? "text-blue-500" : "text-zinc-400"
-              }`}
+              className="text-zinc-300 hover:text-white px-3 py-2"
             >
               Email Forwarding
             </Link>
             <Link
               href="/inbox"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/inbox" ? "text-blue-500" : "text-zinc-400"
-              }`}
+              className="text-zinc-300 hover:text-white px-3 py-2"
             >
               Inboxes (Beta)
             </Link>
             <Link
               href="/links"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/links" ? "text-blue-500" : "text-zinc-400"
-              }`}
+              className="text-zinc-300 hover:text-white px-3 py-2"
             >
               Links (Beta)
             </Link>
             <Link
               href="/cdn"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/cdn" ? "text-blue-500" : "text-zinc-400"
-              }`}
+              className="text-zinc-300 hover:text-white px-3 py-2"
             >
               CDN
             </Link>
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={session?.user?.image} />
-                <AvatarFallback>{session?.user?.name?.[0]}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {session?.user?.name}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {session?.user?.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Mobile menu - shown/hidden based on state */}
+        <div
+          className={`${
+            isOpen ? "block" : "hidden"
+          } md:hidden border-t border-zinc-800`}
+        >
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            <Link
+              href="/domains"
+              className="block text-zinc-300 hover:text-white px-3 py-2 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Domains
+            </Link>
+            <Link
+              href="/forwarding"
+              className="block text-zinc-300 hover:text-white px-3 py-2 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Email Forwarding
+            </Link>
+            <Link
+              href="/inboxes"
+              className="block text-zinc-300 hover:text-white px-3 py-2 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Inboxes (Beta)
+            </Link>
+            <Link
+              href="/links"
+              className="block text-zinc-300 hover:text-white px-3 py-2 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Links (Beta)
+            </Link>
+            <Link
+              href="/cdn"
+              className="block text-zinc-300 hover:text-white px-3 py-2 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              CDN
+            </Link>
+          </div>
+        </div>
       </div>
     </nav>
   );

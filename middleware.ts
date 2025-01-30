@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ALLOWED_PATHS = [
-  "/_next",
-  "/api",
-  "/favicon.ico",
-  "/deprecation",
-  "/assets",
-  "/images",
-];
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get("host");
   const path = request.nextUrl.pathname;
 
-  if (ALLOWED_PATHS.some((allowedPath) => path.startsWith(allowedPath))) {
+  if (path.startsWith("/cdn") || path.startsWith("/api/cdn")) {
     return NextResponse.next();
   }
+
+  if (path === "/") {
+    return NextResponse.next();
+  }
+
 
   if (
     /^\/(?:[a-zA-Z0-9\u{1F300}-\u{1F9FF}\u{3000}-\u{30FF}\u{3040}-\u{309F}\u{4E00}-\u{9FAF}]){6}$/u.test(
@@ -34,11 +31,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect("https://domains.sleepy.engineer");
   }
 
-  const originalUrl = new URL(request.url);
-  const deprecationUrl = new URL("/deprecation", request.url);
-  deprecationUrl.searchParams.set("from", originalUrl.pathname);
-
-  return NextResponse.redirect(deprecationUrl);
+  return NextResponse.next();
 }
 
 export const config = {
