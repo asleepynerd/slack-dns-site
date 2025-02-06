@@ -21,3 +21,15 @@ export interface Message {
     contentType: string;
   }>;
 }
+
+interface AuthUser {
+  id: string;
+  slackId?: string;
+  // other user properties...
+}
+
+export interface AuthContext {
+  user: AuthUser;
+  type: "session" | "apiKey";
+  scopes?: string[];
+}
