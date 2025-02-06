@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
 export function FeedbackPopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,19 +24,16 @@ export function FeedbackPopup() {
   useEffect(() => {
     const checkFeedbackStatus = async () => {
       try {
-        // Check DB first
-        const response = await fetch('/api/feedback/check');
+        const response = await fetch("/api/feedback/check");
         const { hasGivenFeedback: dbFeedback } = await response.json();
-        
+
         if (dbFeedback) {
           setHasGivenFeedback(true);
           return;
         }
 
-        // Then check cookies
-        const maybeLater = Cookies.get('feedbackMaybeLater');
+        const maybeLater = Cookies.get("feedbackMaybeLater");
         if (!maybeLater && !pathname.includes("/auth") && pathname !== "/") {
-          // Show popup after 30 seconds
           const timer = setTimeout(() => {
             setIsOpen(true);
           }, 30000);
@@ -39,7 +41,7 @@ export function FeedbackPopup() {
           return () => clearTimeout(timer);
         }
       } catch (error) {
-        console.error('Error checking feedback status:', error);
+        console.error("Error checking feedback status:", error);
       }
     };
 
@@ -47,8 +49,7 @@ export function FeedbackPopup() {
   }, [pathname]);
 
   const handleMaybeLater = () => {
-    // Set cookie to expire in 7 days
-    Cookies.set('feedbackMaybeLater', 'true', { expires: 7 });
+    Cookies.set("feedbackMaybeLater", "true", { expires: 7 });
     setIsOpen(false);
   };
 
@@ -73,8 +74,7 @@ export function FeedbackPopup() {
         });
         setIsOpen(false);
         setHasGivenFeedback(true);
-        // Remove maybe later cookie if it exists
-        Cookies.remove('feedbackMaybeLater');
+        Cookies.remove("feedbackMaybeLater");
       }
     } catch (error) {
       toast({
@@ -93,7 +93,7 @@ export function FeedbackPopup() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Help Us Improve!</DialogTitle>
+          <DialogTitle>Help Me Improve!</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex justify-center space-x-2">
@@ -120,16 +120,10 @@ export function FeedbackPopup() {
             className="min-h-[100px]"
           />
           <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={handleMaybeLater}
-            >
+            <Button variant="outline" onClick={handleMaybeLater}>
               Maybe Later
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!rating || !feedback}
-            >
+            <Button onClick={handleSubmit} disabled={!rating || !feedback}>
               Submit Feedback
             </Button>
           </div>
@@ -137,4 +131,4 @@ export function FeedbackPopup() {
       </DialogContent>
     </Dialog>
   );
-} 
+}
