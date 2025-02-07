@@ -85,7 +85,7 @@ export function FeedbackPopup() {
     }
   };
 
-  if (hasGivenFeedback || pathname.includes("/auth") || pathname === "/") {
+  if (hasGivenFeedback || pathname.includes("/auth") || pathname === "/" || pathname === "/feedback") {
     return null;
   }
 
