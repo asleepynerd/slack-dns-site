@@ -11,6 +11,7 @@ export function FeedbackForm() {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [hasGivenFeedback, setHasGivenFeedback] = useState(false);
+  const MIN_CHARS = 20;
 
   useEffect(() => {
     const checkFeedbackStatus = async () => {
@@ -27,6 +28,15 @@ export function FeedbackForm() {
   }, []);
 
   const handleSubmit = async () => {
+    if (feedback.length < MIN_CHARS) {
+      toast({
+        title: "Error",
+        description: `Feedback must be at least ${MIN_CHARS} characters long`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
@@ -83,18 +93,28 @@ export function FeedbackForm() {
             </Button>
           ))}
         </div>
-        <Textarea
-          placeholder="Tell us what you think about the platform..."
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          className="min-h-[100px]"
-        />
+        <div className="space-y-2">
+          <Textarea
+            placeholder="Tell us what you think about the platform..."
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            className="min-h-[100px]"
+          />
+          <p className="text-sm text-zinc-500">
+            {feedback.length < MIN_CHARS
+              ? `At least ${MIN_CHARS - feedback.length} more characters needed`
+              : `${feedback.length} characters`}
+          </p>
+        </div>
         <div className="flex justify-end">
-          <Button onClick={handleSubmit} disabled={!rating || !feedback}>
+          <Button
+            onClick={handleSubmit}
+            disabled={!rating || !feedback || feedback.length < MIN_CHARS}
+          >
             Submit Feedback
           </Button>
         </div>
       </CardContent>
     </Card>
   );
-} 
+}

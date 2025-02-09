@@ -11,10 +11,17 @@ export async function POST(req: Request) {
   }
 
   const { feedback, rating, path } = await req.json();
-  
+
   if (!feedback || !rating) {
     return NextResponse.json(
       { error: "Feedback and rating are required" },
+      { status: 400 }
+    );
+  }
+
+  if (feedback.length < 20) {
+    return NextResponse.json(
+      { error: "Feedback must be at least 20 characters long" },
       { status: 400 }
     );
   }
@@ -32,4 +39,4 @@ export async function POST(req: Request) {
   await userFeedback.save();
 
   return NextResponse.json({ success: true });
-} 
+}
