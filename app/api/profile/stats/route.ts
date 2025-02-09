@@ -9,6 +9,12 @@ import { EmailForwarding } from "@/lib/models/email";
 import { Link } from "@/lib/models/link";
 import { CDNFile } from "@/lib/models/cdn";
 
+interface DomainDoc {
+  userId: string;
+  domains: any[];
+  forwarding?: any[];
+}
+
 export async function GET() {
   const session = await getServerSession(options);
   if (!session?.user) {
@@ -22,8 +28,8 @@ export async function GET() {
       inboxCount,
       messageCount,
       feedbacks,
-      domains,
-      emailForwarding,
+      domainDoc,
+      emailForwardingDoc,
       links,
       cdnFiles,
     ] = await Promise.all([
@@ -36,8 +42,12 @@ export async function GET() {
         },
       }),
       Feedback.find({ userId: session.user.id }).select("rating"),
-      Domain.countDocuments({ userId: session.user.id }),
-      EmailForwarding.countDocuments({ userId: session.user.id }),
+      Domain.findOne({
+        userId: session.user.slackId,
+      }).lean() as Promise<DomainDoc | null>,
+      EmailForwarding.findOne({
+        userId: session.user.slackId,
+      }).lean() as Promise<DomainDoc | null>,
       Link.countDocuments({ userId: session.user.id }),
       CDNFile.countDocuments({ userId: session.user.id }),
     ]);
@@ -52,8 +62,8 @@ export async function GET() {
       inboxCount,
       messageCount,
       averageFeedback,
-      domainCount: domains,
-      emailForwardingCount: emailForwarding,
+      domainCount: domainDoc?.domains?.length || 0,
+      emailForwardingCount: emailForwardingDoc?.forwarding?.length || 0,
       linkCount: links,
       cdnFileCount: cdnFiles,
     });
